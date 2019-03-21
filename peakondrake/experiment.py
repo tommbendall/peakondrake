@@ -1,4 +1,4 @@
-from simulation import *
+from peakondrake.simulation import *
 from firedrake import PeriodicIntervalMesh
 from os import path, makedirs
 from netCDF4 import Dataset

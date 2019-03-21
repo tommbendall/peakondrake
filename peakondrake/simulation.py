@@ -1,9 +1,9 @@
 from firedrake import FunctionSpace, Function, VectorFunctionSpace, Constant
-from initial_conditions import *
-from equations import *
-from diagnostic_equations import *
-from stochastic_functions import *
-from outputting import *
+from peakondrake.initial_conditions import *
+from peakondrake.equations import *
+from peakondrake.diagnostic_equations import *
+from peakondrake.stochastic_functions import *
+from peakondrake.outputting import *
 
 def simulation(simulation_parameters,
                diagnostic_values=None,
