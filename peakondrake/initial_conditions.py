@@ -1,7 +1,7 @@
 from firedrake import (dx, conditional, exp, as_vector, dot,
                        Function, NonlinearVariationalSolver,
                        TestFunction, NonlinearVariationalProblem,
-                       SpatialCoordinate, Constant)
+                       SpatialCoordinate, Constant, FunctionSpace)
 
 def build_initial_conditions(prognostic_variables, simulation_parameters):
 
@@ -41,17 +41,18 @@ def build_initial_conditions(prognostic_variables, simulation_parameters):
         prognostic_variables.u.project(as_vector([ic_expr]))
 
         # need to find initial m by solving helmholtz problem
-        m0 = Function(prognostic_variables.Vm)
+        CG1 = FunctionSpace(mesh, "CG", 1)
         u0 = prognostic_variables.u
-        p = TestFunction(prognostic_variables.Vm)
+        p = TestFunction(CG1)
+        m_CG = Function(CG1)
         ones = Function(prognostic_variables.Vu).project(as_vector([Constant(1.)]))
 
-        Lm = (p*m0 - p*dot(ones,u0) - alphasq*p.dx(0)*dot(ones,u0.dx(0)))*dx
-        mprob0 = NonlinearVariationalProblem(Lm, m0)
+        Lm = (p*m_CG - p*dot(ones,u0) - alphasq*p.dx(0)*dot(ones,u0.dx(0)))*dx
+        mprob0 = NonlinearVariationalProblem(Lm, m_CG)
         msolver0 = NonlinearVariationalSolver(mprob0, solver_parameters={'ksp_type': 'preonly',
                                                                          'pc_type': 'lu'})
         msolver0.solve()
-        prognostic_variables.m.assign(m0)
+        prognostic_variables.m.interpolate(m_CG)
 
     else:
         raise NotImplementedError('Other schemes not yet implemented.')

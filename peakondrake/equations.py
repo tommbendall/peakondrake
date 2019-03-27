@@ -58,7 +58,38 @@ class Equations(object):
                                                                                 'pc_type':'lu'})
 
         elif self.scheme == 'upwind' and self.timestepping == 'midpoint':
-            raise NotImplementedError('this is not yet implemented')
+            Vm = prognostic_variables.Vm
+            Vu = prognostic_variables.Vu
+            self.m = prognostic_variables.m
+            self.u = prognostic_variables.u
+            self.Xi = prognostic_variables.Xi
+            self.m0 = Function(Vm).assign(self.m)
+
+            # now make problem for the actual problem
+            psi = TestFunction(Vm)
+            self.m_trial = Function(Vm)
+            self.mh = (self.m0 + self.m_trial) / 2
+
+            us = Dt * self.u + sqrt(Dt) * self.Xi
+
+            nhat = FacetNormal(mesh)
+            un = 0.5*(dot(us, nhat) + abs(dot(us, nhat)))
+            ones = Function(Vu).project(as_vector([Constant(1.)]))
+
+            Lm = (psi * self.m_trial * dx - psi * self.m0 * dx
+                  - psi.dx(0) * self.mh * dot(ones, us) * dx
+                  + psi* self.mh * dot(ones, us.dx(0)) * dx
+                  + jump(psi) * (un('+')*self.mh('+') - un('-')*self.mh('-')) * dS)
+            mprob = NonlinearVariationalProblem(Lm, self.m_trial)
+            self.msolver = NonlinearVariationalSolver(mprob, solver_parameters={'ksp_type':'preonly',
+                                                                                'pc_type':'bjacobi',
+                                                                                'sub_pc_type':'ilu'})
+
+            phi = TestFunction(Vu)
+            Lu = (dot(phi, ones) * self.m * dx - dot(phi, self.u) * dx - alphasq * dot(self.u.dx(0), phi.dx(0)) * dx)
+            uprob = NonlinearVariationalProblem(Lu, self.u)
+            self.usolver = NonlinearVariationalSolver(uprob, solver_parameters={'ksp_type':'preonly',
+                                                                                'pc_type':'lu'})
 
         elif self.scheme == 'conforming' and self.timestepping == 'midpoint':
             raise NotImplementedError('this is not yet implemented')
@@ -88,7 +119,10 @@ class Equations(object):
             self.usolver.solve()
 
         elif self.scheme == 'upwind' and self.timestepping == 'midpoint':
-            raise NotImplementedError('this is not yet implemented')
+            self.msolver.solve()
+            self.m.assign(self.m_trial)
+            self.usolver.solve()
+            self.m0.assign(self.m)
 
         elif self.scheme == 'conforming' and self.timestepping == 'midpoint':
             raise NotImplementedError('this is not yet implemented')
