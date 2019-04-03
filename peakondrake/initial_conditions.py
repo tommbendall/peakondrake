@@ -38,7 +38,9 @@ def build_initial_conditions(prognostic_variables, simulation_parameters):
         else:
             raise ValueError('Initial condition not recognised.')
 
-        prognostic_variables.u.project(as_vector([ic_expr]))
+        VCG5 = FunctionSpace(mesh, "CG", 5)
+        smooth_condition = Function(VCG5).interpolate(ic_expr)
+        prognostic_variables.u.project(as_vector([smooth_condition]))
 
         # need to find initial m by solving helmholtz problem
         CG1 = FunctionSpace(mesh, "CG", 1)

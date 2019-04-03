@@ -157,7 +157,7 @@ class DiagnosticVariables(object):
             elif field == 'du':
                 V = FunctionSpace(self.mesh, "DG", 0)
                 self.fields[field] = Function(V, name=field)
-                self.dumpfields[field] = Function(V, name=field)
+                self.dumpfields[field] = self.fields[field]
 
             else:
                 raise ValueError('Output field %s not recognised.' % field)
