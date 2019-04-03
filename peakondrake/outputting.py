@@ -1,4 +1,5 @@
-from firedrake import File, assemble, dx, dS, norm, dot
+from firedrake import (File, assemble, dx, dS, norm, dot,
+                       Function, op2)
 from netCDF4 import Dataset
 import numpy as np
 
@@ -54,7 +55,7 @@ class Outputting(object):
             self.field_file = File(field_file_name)
 
             prognostic_variables = [value for value in self.prognostic_variables.fields.values()]
-            diagnostic_variables = [value for value in self.diagnostic_variables.fields.values()]
+            diagnostic_variables = [value for value in self.diagnostic_variables.dumpfields.values()]
             self.dumpfields = prognostic_variables + diagnostic_variables
 
             self.field_file.write(*self.dumpfields, t=0)
@@ -92,8 +93,17 @@ class Outputting(object):
                 output = norm(u, norm_type='H1')
             elif diagnostic == 'h1_m':
                 output = norm(m, norm_type='H1')
+            elif diagnostic == 'mass_m':
+                output = assemble(m * dx)
+            elif diagnostic == 'mass_m2':
+                output = assemble(m * m * dx)
             elif diagnostic == 'min_u':
                 output = 1 if norm(u_min, norm_type='L2') > 1e-10 else 0
+            elif diagnostic == 'max_jump':
+                output = find_max(self.diagnostic_variables.fields['jump_du'])
+            elif diagnostic == 'max_jump_loc':
+                raise NotImplementedError('max_jump_loc not yet implemented')
+                output = find_max(diagnostic_variables.jump_du)[1]
             else:
                 raise ValueError('Diagnostic not recgonised.')
 
@@ -112,3 +122,14 @@ class Outputting(object):
 
         if self.field_ndump > 0:
             self.field_file.write(*self.dumpfields, time=t)
+
+
+def find_max(f):
+    f_abs = Function(f.function_space()).project(abs(f))
+    fmax = op2.Global(1, np.finfo(float).min, dtype=float)
+    op2.par_loop(op2.Kernel("""
+    void maxify(double *a, double *b) {
+    a[0] = a[0] < fabs(b[0]) ? fabs(b[0]) : a[0];
+    }
+    """, "maxify"), f_abs.dof_dset.set, fmax(op2.MAX), f_abs.dat(op2.READ))
+    return fmax.data[0]

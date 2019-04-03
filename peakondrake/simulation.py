@@ -42,7 +42,7 @@ def simulation(simulation_parameters,
 
 
     prognostic_variables = PrognosticVariables(scheme, mesh)
-    diagnostic_variables = DiagnosticVariables(prognostic_variables, fields_to_output)
+    diagnostic_variables = DiagnosticVariables(prognostic_variables, fields_to_output, diagnostic_values=diagnostic_values)
 
     build_initial_conditions(prognostic_variables, simulation_parameters)
     Xis = StochasticFunctions(prognostic_variables, simulation_parameters)
@@ -139,18 +139,38 @@ class DiagnosticVariables(object):
     :arg fields_to_output: a list of diagnostic fields to use.
     """
 
-    def __init__(self, prognostic_variables, fields_to_output):
+    def __init__(self, prognostic_variables, fields_to_output, diagnostic_values=None):
 
         self.scheme = prognostic_variables.scheme
         self.mesh = prognostic_variables.mesh
         self.fields = {}
+        self.dumpfields = {}
 
         for field in fields_to_output:
-            if field in ['uscalar', 'Xiscalar']:
+            if field in ['uscalar', 'Xiscalar', 'jump_du']:
                 if self.scheme == 'upwind':
                     V = FunctionSpace(self.mesh, "CG", 1)
                     self.fields[field] = Function(V, name=field)
+                    self.dumpfields[field] = self.fields[field]
                 else:
                     raise ValueError('Output field %s only usable with upwind scheme, not %s' % (field, self.scheme))
+            elif field == 'du':
+                V = FunctionSpace(self.mesh, "DG", 0)
+                self.fields[field] = Function(V, name=field)
+                self.dumpfields[field] = Function(V, name=field)
+
             else:
                 raise ValueError('Output field %s not recognised.' % field)
+
+        if diagnostic_values is not None:
+            for diagnostic in diagnostic_values:
+                if diagnostic == 'max_jump':
+                    CG1 = FunctionSpace(self.mesh, "CG", 1)
+                    DG0 = FunctionSpace(self.mesh, "DG", 0)
+                    required_fields = ['jump_du', 'du']
+                    for field in required_fields:
+                        if field not in self.fields.keys():
+                            if field == 'du':
+                                self.fields[field] = Function(DG0)
+                            else:
+                                self.fields[field] = Function(CG1)

@@ -18,7 +18,7 @@ experiment(code, Ld, tmax,
            alphasq=1.0,
            c0=0.,
            gamma=0.,
-           diagnostics=['h1_u', 'h1_m', 'l2_u', 'l2_m', 'energy'],
+           diagnostics=['h1_u', 'h1_m', 'l2_u', 'l2_m', 'energy', 'max_jump'],
            fields_to_output=['uscalar', 'Xiscalar'],
            ndump=int(tmax / (10 * dt)),
            field_ndump=int(tmax / (10 * dt)))
