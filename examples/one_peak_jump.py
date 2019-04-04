@@ -19,7 +19,7 @@ experiment(code, Ld, tmax,
            alphasq=1.0,
            c0=0.,
            gamma=0.,
-           diagnostics=['l2_m', 'max_jump'],
+           diagnostics=['l2_m', 'max_jump_local', 'max_jump_global', 'max_du_loc', 'min_du_loc'],
            fields_to_output=['uscalar', 'du', 'jump_du'],
            ndump=int(tmax / (100 * dt)),
            field_ndump=int(tmax / (100 * dt)))

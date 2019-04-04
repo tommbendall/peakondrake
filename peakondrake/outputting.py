@@ -99,11 +99,14 @@ class Outputting(object):
                 output = assemble(m * m * dx)
             elif diagnostic == 'min_u':
                 output = 1 if norm(u_min, norm_type='L2') > 1e-10 else 0
-            elif diagnostic == 'max_jump':
-                output = find_max(self.diagnostic_variables.fields['jump_du'])
-            elif diagnostic == 'max_jump_loc':
-                raise NotImplementedError('max_jump_loc not yet implemented')
-                output = find_max(diagnostic_variables.jump_du)[1]
+            elif diagnostic == 'max_jump_local':
+                output = find_max(self.diagnostic_variables.fields['jump_du'], self.diagnostic_variables.coords)[0]
+            elif diagnostic == 'max_jump_global':
+                output = find_max(self.diagnostic_variables.fields['du'], self.diagnostic_variables.coords)[0] - find_min(self.diagnostic_variables.fields['du'], self.diagnostic_variables.coords)[0]
+            elif diagnostic == 'max_du_loc':
+                output = find_max(self.diagnostic_variables.fields['du'], self.diagnostic_variables.coords)[1]
+            elif diagnostic == 'min_du_loc':
+                output = find_min(self.diagnostic_variables.fields['du'], self.diagnostic_variables.coords)[1]
             else:
                 raise ValueError('Diagnostic not recgonised.')
 
@@ -124,12 +127,14 @@ class Outputting(object):
             self.field_file.write(*self.dumpfields, time=t)
 
 
-def find_max(f):
-    f_abs = Function(f.function_space()).project(abs(f))
-    fmax = op2.Global(1, np.finfo(float).min, dtype=float)
-    op2.par_loop(op2.Kernel("""
-    void maxify(double *a, double *b) {
-    a[0] = a[0] < fabs(b[0]) ? fabs(b[0]) : a[0];
-    }
-    """, "maxify"), f_abs.dof_dset.set, fmax(op2.MAX), f_abs.dat(op2.READ))
-    return fmax.data[0]
+def find_min(f, x):
+    fmin = np.min(f.dat.data[:])
+    min_idx = np.argmin(f.dat.data[:])
+    xmin = x.dat.data[min_idx]
+    return (fmin, xmin)
+
+def find_max(f, x):
+    fmax = np.max(f.dat.data[:])
+    max_idx = np.argmax(f.dat.data[:])
+    xmax = x.dat.data[max_idx]
+    return (fmax, xmax)

@@ -1,4 +1,4 @@
-from firedrake import FunctionSpace, Function, VectorFunctionSpace, Constant
+from firedrake import FunctionSpace, Function, VectorFunctionSpace, Constant, SpatialCoordinate, as_vector
 from peakondrake.initial_conditions import *
 from peakondrake.equations import *
 from peakondrake.diagnostic_equations import *
@@ -143,6 +143,8 @@ class DiagnosticVariables(object):
 
         self.scheme = prognostic_variables.scheme
         self.mesh = prognostic_variables.mesh
+        x, = SpatialCoordinate(self.mesh)
+        self.coords = Function(FunctionSpace(self.mesh, "CG", 1)).interpolate(x)
         self.fields = {}
         self.dumpfields = {}
 
@@ -163,14 +165,22 @@ class DiagnosticVariables(object):
                 raise ValueError('Output field %s not recognised.' % field)
 
         if diagnostic_values is not None:
+            required_fields = []
             for diagnostic in diagnostic_values:
-                if diagnostic == 'max_jump':
+                if diagnostic == 'max_jump_local':
                     CG1 = FunctionSpace(self.mesh, "CG", 1)
                     DG0 = FunctionSpace(self.mesh, "DG", 0)
-                    required_fields = ['jump_du', 'du']
-                    for field in required_fields:
-                        if field not in self.fields.keys():
-                            if field == 'du':
-                                self.fields[field] = Function(DG0)
-                            else:
-                                self.fields[field] = Function(CG1)
+                    required_fields.extend(['jump_du', 'du'])
+                elif diagnostic == 'max_jump_global':
+                    required_fields.extend(['du'])
+                elif diagnostic == 'max_du_loc':
+                    required_fields.extend(['du'])
+                elif diagnostic == 'min_du_loc':
+                    required_fields.extend(['du'])
+
+            for field in required_fields:
+                if field not in self.fields.keys():
+                    if field == 'du':
+                        self.fields[field] = Function(DG0)
+                    else:
+                        self.fields[field] = Function(CG1)
