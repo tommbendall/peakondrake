@@ -1,16 +1,16 @@
 from peakondrake import *
 
 
-code = 'deterministic_one_peak_jump_short'
+code = 'one_peak_mu'
 Ld = 40.
 dt = 0.001
 tmax = 50
 
 experiment(code, Ld, tmax,
-           resolutions=[100, 200, 300, 400, 500],
+           resolutions=[500, 625, 750, 875, 1000],
            dts=dt,
-           sigmas=0.0,
-           seeds=0,
+           sigmas=0.2,
+           seeds=range(25),
            schemes='upwind',
            timesteppings='midpoint',
            ics='one_peak',

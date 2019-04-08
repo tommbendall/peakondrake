@@ -144,7 +144,7 @@ class DiagnosticVariables(object):
         self.scheme = prognostic_variables.scheme
         self.mesh = prognostic_variables.mesh
         x, = SpatialCoordinate(self.mesh)
-        self.coords = Function(FunctionSpace(self.mesh, "CG", 1)).interpolate(x)
+        self.coords = Function(FunctionSpace(self.mesh, "DG", 0)).interpolate(x)
         self.fields = {}
         self.dumpfields = {}
 
