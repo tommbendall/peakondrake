@@ -1,4 +1,5 @@
 from firedrake import FunctionSpace, Function, VectorFunctionSpace, Constant, SpatialCoordinate, as_vector
+from collections import OrderedDict
 from peakondrake.initial_conditions import *
 from peakondrake.equations import *
 from peakondrake.diagnostic_equations import *
@@ -112,12 +113,10 @@ class PrognosticVariables(object):
             self.fields['u'] = self.u
             self.fields['m'] = self.m
         elif scheme == 'conforming':
-            self.Vm = FunctionSpace(mesh, "CG", 1)
             self.Vu = FunctionSpace(mesh, "CG", 1)
-            self.m = Function(self.Vm, name='m')
             self.u = Function(self.Vu, name='u')
+            self.Vf = FunctionSpace(mesh, "CG", 1)
             self.fields['u'] = self.u
-            self.fields['m'] = self.m
         elif scheme == 'hydrodynamic':
             self.Vf = FunctionSpace(mesh, "CG", 1)
             self.Vu = FunctionSpace(mesh, "CG", 1)
@@ -145,27 +144,36 @@ class DiagnosticVariables(object):
         self.mesh = prognostic_variables.mesh
         x, = SpatialCoordinate(self.mesh)
         self.coords = Function(FunctionSpace(self.mesh, "DG", 0)).interpolate(x)
-        self.fields = {}
-        self.dumpfields = {}
+        self.smooth_coords = Function(FunctionSpace(self.mesh, "CG", 5)).interpolate(x)
+        self.fields = OrderedDict()
+        self.dumpfields = OrderedDict()
+        required_fields = []
 
         for field in fields_to_output:
-            if field in ['uscalar', 'Xiscalar', 'jump_du']:
+            if field in ['uscalar', 'Xiscalar']:
                 if self.scheme == 'upwind':
                     V = FunctionSpace(self.mesh, "CG", 1)
-                    self.fields[field] = Function(V, name=field)
-                    self.dumpfields[field] = self.fields[field]
                 else:
                     raise ValueError('Output field %s only usable with upwind scheme, not %s' % (field, self.scheme))
             elif field == 'du':
                 V = FunctionSpace(self.mesh, "DG", 0)
-                self.fields[field] = Function(V, name=field)
-                self.dumpfields[field] = self.fields[field]
-
+            elif field == 'du_smooth':
+                required_fields.extend(['du'])
+                V = FunctionSpace(self.mesh, "CG", 5)
+            elif field == 'jump_du':
+                required_fields.extend(['du'])
+                V = FunctionSpace(self.mesh, "CG", 1)
+            elif field == 'F':
+                V = FunctionSpace(self.mesh, "CG", 1)
             else:
                 raise ValueError('Output field %s not recognised.' % field)
 
+            self.fields[field] = Function(V, name=field)
+            self.dumpfields[field] = self.fields[field]
+
+        # if there is a diagnostic value that we want, we need to add any required fields
+        # to the diagnostics so that they are calculated
         if diagnostic_values is not None:
-            required_fields = []
             for diagnostic in diagnostic_values:
                 if diagnostic == 'max_jump_local':
                     CG1 = FunctionSpace(self.mesh, "CG", 1)
@@ -177,10 +185,16 @@ class DiagnosticVariables(object):
                     required_fields.extend(['du'])
                 elif diagnostic == 'min_du_loc':
                     required_fields.extend(['du'])
+                elif diagnostic == 'max_du_smooth_loc':
+                    required_fields.extend(['du', 'du_smooth'])
+                elif diagnostic == 'min_du_smooth_loc':
+                    required_fields.extend(['du', 'du_smooth'])
 
-            for field in required_fields:
-                if field not in self.fields.keys():
-                    if field == 'du':
-                        self.fields[field] = Function(DG0)
-                    else:
-                        self.fields[field] = Function(CG1)
+        for field in required_fields:
+            if field not in self.fields.keys():
+                if field == 'du':
+                    self.fields[field] = Function(DG0)
+                elif field == 'du_smooth':
+                    self.fields[field] = Function(FunctionSpace(self.mesh, "CG", 5))
+                else:
+                    self.fields[field] = Function(CG1)

@@ -78,8 +78,7 @@ class Outputting(object):
         u = self.prognostic_variables.u
         if 'm' in self.prognostic_variables.fields.keys():
             m = self.prognostic_variables.m
-        else:
-            m = self.diagnostic_variables.m
+
         alphasq = self.simulation_parameters['alphasq'][-1]
 
         for diagnostic in self.diagnostic_values:
@@ -107,8 +106,12 @@ class Outputting(object):
                 output = find_max(self.diagnostic_variables.fields['du'], self.diagnostic_variables.coords)[1]
             elif diagnostic == 'min_du_loc':
                 output = find_min(self.diagnostic_variables.fields['du'], self.diagnostic_variables.coords)[1]
+            elif diagnostic == 'max_du_smooth_loc':
+                output = find_max(self.diagnostic_variables.fields['du_smooth'], self.diagnostic_variables.smooth_coords)[1]
+            elif diagnostic == 'min_du_smooth_loc':
+                output = find_min(self.diagnostic_variables.fields['du_smooth'], self.diagnostic_variables.smooth_coords)[1]
             else:
-                raise ValueError('Diagnostic not recgonised.')
+                raise ValueError('Diagnostic %s not recgonised.' % diagnostic)
 
             self.data_file[diagnostic][[slice(self.t_idx,self.t_idx+1)]+self.index_slices] = output
 

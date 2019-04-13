@@ -42,10 +42,14 @@ class StochasticFunctions(object):
                 else:
                     self.Xi_functions.append(cos(2*(n+1)*pi*x/Ld))
 
+        elif self.Xi_family == 'gaussians':
+            for n in range(self.num_Xis):
+                    self.Xi_functions.append(0.5*self.num_Xis*exp(-((x-Ld*(n+1)/(self.num_Xis +1.0))/2.)**2))
+
         else:
             raise NotImplementedError('Xi_family %s not implemented' % self.Xi_family)
 
-        Xi_expr = 0
+        Xi_expr = 0.0*x
 
         for dW, Xi_function in zip(self.dWs, self.Xi_functions):
             Xi_expr += dW * Xi_function

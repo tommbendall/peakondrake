@@ -1,24 +1,24 @@
 from peakondrake import *
 
-code = 'test_one_run'
+code = 'test_jump'
 Ld = 40.
 dt = 0.001
 tmax = 0.01
 
 experiment(code, Ld, tmax,
-           resolutions=20,
+           resolutions=[100, 500, 1000, 5000, 10000],
            dts=dt,
-           sigmas=0.25,
+           sigmas=0.0,
            seeds=0,
            schemes='upwind',
-           timesteppings='ssprk3',
+           timesteppings='midpoint',
            ics='one_peak',
-           num_Xis=7,
+           num_Xis=0,
            Xi_family='sines',
            alphasq=1.0,
            c0=0.,
            gamma=0.,
-           diagnostics=['h1_u', 'h1_m', 'l2_u', 'l2_m', 'energy'],
-           fields_to_output=['uscalar', 'Xiscalar'],
+           diagnostics=['l2_m', 'max_jump_local', 'max_du_loc', 'min_du_loc'],
+           fields_to_output=['uscalar', 'du'],
            ndump=int(tmax / (10 * dt)),
            field_ndump=int(tmax / (10 * dt)))

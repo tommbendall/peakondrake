@@ -20,23 +20,17 @@ def build_initial_conditions(prognostic_variables, simulation_parameters):
     gamma = simulation_parameters['gamma'][-1]
     x, = SpatialCoordinate(mesh)
 
-    if prognostic_variables.scheme == 'upwind':
+    ic_dict = {'two_peaks': (0.2*2/(exp(x-403./15.) + exp(-x+403./15.))
+                             + 0.5*2/(exp(x-203./15.)+exp(-x+203./15.))),
+               'gaussian': 0.5*exp(-((x-10.)/2.)**2),
+               'gaussian_narrow': 0.5*exp(-((x-10.)/1.)**2),
+               'gaussian_wide': 0.5*exp(-((x-10.)/3.)**2),
+               'peakon': conditional(x < 20., exp((x-20.)/1.), exp(-(x-20.)/1.)),
+               'one_peak': 0.5*2/(exp(x-203./15.)+exp(-x+203./15.))}
 
-        if ic == 'two_peaks':
-            ic_expr = (0.2*2/(exp(x-403./15.) + exp(-x+403./15.))
-                        + 0.5*2/(exp(x-203./15.)+exp(-x+203./15.)))
-        elif ic == 'gaussian':
-            ic_expr = (0.5*exp(-((x-10.)/2.)**2))
-        elif ic == 'gaussian_narrow':
-            ic_expr = (0.5*exp(-((x-10.)/1.)**2))
-        elif ic == 'gaussian_wide':
-            ic_expr = (0.5*exp(-((x-10.)/3.)**2))
-        elif ic == 'peakon':
-            ic_expr = conditional(x < 20., exp((x-20.)/1.), exp(-(x-20.)/1.))
-        elif ic == 'one_peak':
-            ic_expr = (0.5*2/(exp(x-203./15.)+exp(-x+203./15.)))
-        else:
-            raise ValueError('Initial condition not recognised.')
+    ic_expr = ic_dict[ic]
+
+    if prognostic_variables.scheme == 'upwind':
 
         VCG5 = FunctionSpace(mesh, "CG", 5)
         smooth_condition = Function(VCG5).interpolate(ic_expr)
@@ -55,6 +49,11 @@ def build_initial_conditions(prognostic_variables, simulation_parameters):
                                                                          'pc_type': 'lu'})
         msolver0.solve()
         prognostic_variables.m.interpolate(m_CG)
+
+    elif prognostic_variables.scheme == 'conforming':
+        VCG5 = FunctionSpace(mesh, "CG", 5)
+        smooth_condition = Function(VCG5).interpolate(ic_expr)
+        prognostic_variables.u.project(smooth_condition)
 
     else:
         raise NotImplementedError('Other schemes not yet implemented.')

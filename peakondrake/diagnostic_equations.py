@@ -1,7 +1,8 @@
 from firedrake import (Projector, Interpolator, as_vector, Constant,
                        VectorFunctionSpace, Function, dot, TestFunction,
-                       TrialFunction, LinearVariationalProblem,
-                       LinearVariationalSolver, dS, jump, VectorElement)
+                       TrialFunction, LinearVariationalProblem, dx,
+                       LinearVariationalSolver, dS, jump, VectorElement,
+                       NonlinearVariationalSolver, NonlinearVariationalProblem)
 
 
 class DiagnosticEquations(object):
@@ -58,6 +59,13 @@ class DiagnosticEquations(object):
                 jprob = LinearVariationalProblem(aj, Lj, jump_du)
                 jsolver = LinearVariationalSolver(jprob)
                 self.solvers.append(jsolver)
+
+            elif key == 'du_smooth':
+                du = self.diagnostic_variables.fields['du']
+                du_smooth = self.diagnostic_variables.fields['du_smooth']
+                projector = Projector(du, du_smooth)
+                self.projectors.append(projector)
+
 
             else:
                 raise NotImplementedError('Diagnostic %s not yet implemented' % key)
