@@ -1,7 +1,7 @@
 from peakondrake import *
 
 
-code = 'skdv_one_gaussian'
+code = 'skdv_six_gaussian'
 Ld = 40.
 dt = 0.001
 tmax = 500
