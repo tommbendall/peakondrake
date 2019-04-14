@@ -20,7 +20,7 @@ experiment(code, Ld, tmax,
            c0=0.,
            gamma=1.0,
            diagnostics=['l2_u'],
-           fields_to_output=['F'],
+           fields_to_output=[],
            ndump=int(tmax / (100 * dt)),
            field_ndump=int(tmax / (100 * dt)),
            allow_fail=True)
