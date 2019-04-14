@@ -22,4 +22,5 @@ experiment(code, Ld, tmax,
            diagnostics=['l2_u'],
            fields_to_output=['F'],
            ndump=int(tmax / (100 * dt)),
-           field_ndump=int(tmax / (100 * dt)))
+           field_ndump=int(tmax / (100 * dt)),
+           allow_fail=True)
