@@ -40,6 +40,7 @@ def simulation(simulation_parameters,
     field_ndump = simulation_parameters['field_ndump'][-1]
     file_name = simulation_parameters['file_name'][-1]
     scheme = simulation_parameters['scheme'][-1]
+    allow_fail = simulation_parameters['allow_fail'][-1]
 
 
     prognostic_variables = PrognosticVariables(scheme, mesh)
@@ -61,6 +62,7 @@ def simulation(simulation_parameters,
     dumpn = 0
     field_dumpn = 0
     t = 0
+    failed = False
 
     # run simulation
     while (t < tmax - 0.5*dt):
@@ -70,7 +72,14 @@ def simulation(simulation_parameters,
         Xis.update()
 
         # solve problems
-        equations.solve()
+        if allow_fail and not failed:
+            try:
+                equations.solve()
+            except ConvergenceError:
+                failed = True
+                print("Solver failed at t = %f" % t)
+        else:
+            equations.solve()
 
         # output if necessary
         dumpn += 1

@@ -3,14 +3,14 @@ from peakondrake import *
 
 code = 'skdv_sines'
 Ld = 40.
-dt = 0.01
+dt = 0.001
 tmax = 500
 
 experiment(code, Ld, tmax,
            resolutions=200,
            dts=dt,
            sigmas=0.2,
-           seeds=range(100),
+           seeds=range(50),
            schemes='conforming',
            timesteppings='midpoint',
            ics='one_peak',

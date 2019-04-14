@@ -3,14 +3,14 @@ from peakondrake import *
 
 code = 'ep_peak_stochastic_12_gauss'
 Ld = 40.
-dt = 0.001
-tmax = 50
+dt = 0.0002
+tmax = 40
 
 experiment(code, Ld, tmax,
-           resolutions=[1000, 1250, 1500, 1750, 2000],
+           resolutions=[200, 800, 1500, 4000, 10000],
            dts=dt,
            sigmas=0.2,
-           seeds=range(25),
+           seeds=range(10),
            schemes='upwind',
            timesteppings='midpoint',
            ics='one_peak',
@@ -22,4 +22,5 @@ experiment(code, Ld, tmax,
            diagnostics=['l2_m', 'max_jump_local', 'max_jump_global', 'max_du_loc', 'min_du_loc'],
            fields_to_output=['uscalar', 'du', 'jump_du'],
            ndump=int(tmax / (100 * dt)),
-           field_ndump=int(tmax / (100 * dt)))
+           field_ndump=int(tmax / (100 * dt)),
+           allow_fail=True)
