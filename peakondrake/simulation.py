@@ -1,4 +1,6 @@
-from firedrake import FunctionSpace, Function, VectorFunctionSpace, Constant, SpatialCoordinate, as_vector
+from firedrake import (FunctionSpace, Function, VectorFunctionSpace,
+                       Constant, SpatialCoordinate, as_vector,
+                       ConvergenceError)
 from collections import OrderedDict
 from peakondrake.initial_conditions import *
 from peakondrake.equations import *
@@ -72,12 +74,15 @@ def simulation(simulation_parameters,
         Xis.update()
 
         # solve problems
-        if allow_fail and not failed:
-            try:
-                equations.solve()
-            except ConvergenceError:
-                failed = True
-                print("Solver failed at t = %f" % t)
+        if allow_fail:
+            if not failed:
+                try:
+                    equations.solve()
+                except ConvergenceError:
+                    failed = True
+                    print("Solver failed at t = %f" % t)
+            else:
+                 pass   
         else:
             equations.solve()
 
@@ -87,7 +92,8 @@ def simulation(simulation_parameters,
 
         # do interpolations/projections for any outputing
         if dumpn == ndump or field_dumpn == field_ndump:
-            diagnostic_equations.solve()
+            if not failed:
+                diagnostic_equations.solve()
 
         # output diagnostic values
         if dumpn == ndump:
