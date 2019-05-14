@@ -150,7 +150,7 @@ class Equations(object):
                 self.Xi = prognostic_variables.Xi
                 self.u0 = Function(Vu).assign(self.u)
 
-                W = MixedFunctionSpace((Vu, Vm))
+                W = MixedFunctionSpace((Vu, Vf))
                 psi, phi = TestFunctions(W)
 
                 w1 = Function(W)
