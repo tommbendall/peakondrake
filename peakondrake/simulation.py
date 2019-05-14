@@ -128,6 +128,9 @@ class PrognosticVariables(object):
             self.u = Function(self.Vu, name='u')
             self.Vf = FunctionSpace(mesh, "CG", 1)
             self.fields['u'] = self.u
+            self.Vm = FunctionSpace(mesh, "CG", 1)
+            self.m = Function(self.Vm)
+            self.fields['m'] = self.m
         elif scheme == 'hydrodynamic':
             self.Vf = FunctionSpace(mesh, "CG", 1)
             self.Vu = FunctionSpace(mesh, "CG", 1)

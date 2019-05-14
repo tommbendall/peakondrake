@@ -24,6 +24,7 @@ class Equations(object):
         self.solvers = []
 
         if alphasq.values()[0] > 0.0 and gamma.values()[0] == 0.0:
+            self.setup = 'ch'
             if self.scheme == 'upwind' and self.timestepping == 'ssprk3':
 
                 Vm = prognostic_variables.Vm
@@ -94,7 +95,38 @@ class Equations(object):
                                                                                     'pc_type':'lu'})
 
             elif self.scheme == 'conforming' and self.timestepping == 'midpoint':
-                raise NotImplementedError('Scheme %s and timestepping %s not yet implemented.' % (self.scheme, self.timestepping))
+                Vm = prognostic_variables.Vm
+                Vu = prognostic_variables.Vu
+
+                self.u = prognostic_variables.u
+                self.m = prognostic_variables.m
+                self.Xi = prognostic_variables.Xi
+                self.u0 = Function(Vu).assign(self.u)
+
+                W = MixedFunctionSpace((Vu, Vm))
+                psi, phi = TestFunctions(W)
+
+                w1 = Function(W)
+                self.u1, self.m1 = split(w1)
+                uh = (self.u1 + self.u) / 2
+                mh = (self.m1 + self.m) / 2
+                us = Dt * uh + sqrt(Dt) * self.Xi
+
+                Lu = (psi * (self.m1 - self.m) * dx
+                      - psi.dx(0) * mh * us * dx
+                      + psi * mh * us.dx(0) * dx
+                      - phi * self.m1 * dx
+                      + phi * self.u1 * dx
+                      + alphasq * phi.dx(0) * self.u1.dx(0) * dx)
+
+                self.u1, self.m1 = w1.split()
+
+                uprob = NonlinearVariationalProblem(Lu, w1)
+                self.usolver = NonlinearVariationalSolver(uprob,
+                                                          solver_parameters={'mat_type': 'aij',
+                                                                             'ksp_type': 'preonly',
+                                                                             'pc_type': 'lu'})
+
 
             elif self.scheme == 'hydrodynamic' and self.timestepping == 'midpoint':
                 raise NotImplementedError('Scheme %s and timestepping %s not yet implemented.' % (self.scheme, self.timestepping))
@@ -103,6 +135,7 @@ class Equations(object):
                 raise ValueError('Scheme %s and timestepping %s either not compatible or not recognised.' % (self.scheme, self.timestepping))
 
         elif alphasq.values()[0] == 0.0 and gamma.values()[0] > 0.0:
+            self.setup = 'kdv'
             if self.scheme == 'upwind' and self.timestepping == 'ssprk3':
                 raise NotImplementedError('Scheme %s and timestepping %s not yet implemented.' % (self.scheme, self.timestepping))
 
@@ -117,7 +150,7 @@ class Equations(object):
                 self.Xi = prognostic_variables.Xi
                 self.u0 = Function(Vu).assign(self.u)
 
-                W = MixedFunctionSpace((Vu, Vf))
+                W = MixedFunctionSpace((Vu, Vm))
                 psi, phi = TestFunctions(W)
 
                 w1 = Function(W)
@@ -174,10 +207,14 @@ class Equations(object):
             self.m0.assign(self.m)
 
         elif self.scheme == 'conforming' and self.timestepping == 'midpoint':
-
-            self.usolver.solve()
-            self.u.assign(self.u1)
-            self.u0.assign(self.u)
+            if self.setup == 'kdv':
+                self.usolver.solve()
+                self.u.assign(self.u1)
+                self.u0.assign(self.u)
+            elif self.setup == 'ch':
+                self.usolver.solve()
+                self.u.assign(self.u1)
+                self.m.assign(self.m1)
 
         elif self.scheme == 'hydrodynamic' and self.timestepping == 'midpoint':
             raise NotImplementedError('this is not yet implemented')
