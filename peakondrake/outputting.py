@@ -65,7 +65,7 @@ class Outputting(object):
             if len(value) > 1:
                 self.out_string += str(key) + ' = %s, ' % str(value[0])
 
-    def dump_diagnostics(self, t):
+    def dump_diagnostics(self, t, failed=False):
         """
         Dump the diagnostic values.
 
@@ -82,7 +82,9 @@ class Outputting(object):
         alphasq = self.simulation_parameters['alphasq'][-1]
 
         for diagnostic in self.diagnostic_values:
-            if diagnostic == 'energy':
+            if failed:
+                output = np.nan
+            elif diagnostic == 'energy':
                 output = assemble((dot(u, u) + alphasq*dot(u.dx(0),u.dx(0)))*dx)
             elif diagnostic == 'l2_m':
                 output = norm(m, norm_type='L2')
