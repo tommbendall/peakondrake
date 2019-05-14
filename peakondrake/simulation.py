@@ -1,6 +1,4 @@
-from firedrake import (FunctionSpace, Function, VectorFunctionSpace,
-                       Constant, SpatialCoordinate, as_vector,
-                       ConvergenceError)
+from firedrake import FunctionSpace, Function, VectorFunctionSpace, Constant, SpatialCoordinate, as_vector, ConvergenceError
 from collections import OrderedDict
 from peakondrake.initial_conditions import *
 from peakondrake.equations import *
@@ -71,7 +69,7 @@ def simulation(simulation_parameters,
         t += dt
 
         # update stochastic basis functions
-        Xis.update()
+        Xis.update(t)
 
         # solve problems
         if allow_fail:
@@ -81,8 +79,6 @@ def simulation(simulation_parameters,
                 except ConvergenceError:
                     failed = True
                     print("Solver failed at t = %f" % t)
-            else:
-                 pass   
         else:
             equations.solve()
 
@@ -97,13 +93,13 @@ def simulation(simulation_parameters,
 
         # output diagnostic values
         if dumpn == ndump:
-            outputting.dump_diagnostics(t)
+            outputting.dump_diagnostics(t, failed=failed)
             dumpn -= ndump
 
         # output fields
         if field_dumpn == field_ndump:
-            outputting.dump_fields(t)
-            field_dumpn -= field_ndump
+            if not failed:
+                outputting.dump_fields(t)
 
 
 class PrognosticVariables(object):
@@ -132,6 +128,9 @@ class PrognosticVariables(object):
             self.u = Function(self.Vu, name='u')
             self.Vf = FunctionSpace(mesh, "CG", 1)
             self.fields['u'] = self.u
+            self.Vm = FunctionSpace(mesh, "CG", 1)
+            self.m = Function(self.Vm)
+            self.fields['m'] = self.m
         elif scheme == 'hydrodynamic':
             self.Vf = FunctionSpace(mesh, "CG", 1)
             self.Vu = FunctionSpace(mesh, "CG", 1)

@@ -22,6 +22,8 @@ class StochasticFunctions(object):
         self.Xi = prognostic_variables.Xi
         self.dWs = [Constant(0.0) for dw in range(self.num_Xis)]
         self.Xi_functions = []
+        self.sigma_kick = simulation_parameters['sigma_kick'][-1]
+        self.t_kick = simulation_parameters['t_kick'][-1]
 
         seed = simulation_parameters['seed'][-1]
         np.random.seed(seed)
@@ -61,12 +63,15 @@ class StochasticFunctions(object):
 
 
 
-    def update(self):
+    def update(self, t):
         """
         Updates the Xi function for the next time step.
         """
         if self.num_Xis > 0:
-            [dw.assign(self.sigma*np.random.randn()) for dw in self.dWs]
+            if len(self.t_kick) > 0 and np.min(self.t_kick) < t < np.max(self.t_kick):
+                [dw.assign(self.sigma_kick*np.random.randn()) for dw in self.dWs]
+            else:
+                [dw.assign(self.sigma*np.random.randn()) for dw in self.dWs]
             self.Xi_interpolator.interpolate()
         else:
             pass
