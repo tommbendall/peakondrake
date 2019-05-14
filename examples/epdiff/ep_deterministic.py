@@ -21,6 +21,6 @@ experiment(code, Ld, tmax,
            gamma=0.,
            diagnostics=['l2_m', 'max_jump_local', 'max_jump_global', 'max_du_loc', 'min_du_loc'],
            fields_to_output=['uscalar', 'du', 'jump_du'],
-           ndump=int(tmax / (100 * dt)),
+           ndump=int(tmax / (1000 * dt)),
            field_ndump=int(tmax / (100 * dt)),
            allow_fail=True)
