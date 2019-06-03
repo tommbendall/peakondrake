@@ -100,6 +100,7 @@ def simulation(simulation_parameters,
         if field_dumpn == field_ndump:
             if not failed:
                 outputting.dump_fields(t)
+                field_dumpn -= field_ndump
 
 
 class PrognosticVariables(object):
@@ -143,6 +144,7 @@ class PrognosticVariables(object):
 
         self.Xi = Function(self.Vu, name='Xi')
         self.fields['Xi'] = self.Xi
+        self.pure_xis = []
 
 class DiagnosticVariables(object):
     """
@@ -179,6 +181,12 @@ class DiagnosticVariables(object):
                 V = FunctionSpace(self.mesh, "CG", 1)
             elif field == 'F':
                 V = FunctionSpace(self.mesh, "CG", 1)
+            elif field == 'u2_flux':
+                V = FunctionSpace(self.mesh, "CG", 1)
+            elif field == 'a':
+                V = FunctionSpace(self.mesh, "CG", 1)
+            elif field == 'b':
+                V = FunctionSpace(self.mesh, "CG", 1)
             else:
                 raise ValueError('Output field %s not recognised.' % field)
 
@@ -187,11 +195,12 @@ class DiagnosticVariables(object):
 
         # if there is a diagnostic value that we want, we need to add any required fields
         # to the diagnostics so that they are calculated
+        CG1 = FunctionSpace(self.mesh, "CG", 1)
+        DG0 = FunctionSpace(self.mesh, "DG", 0)
+
         if diagnostic_values is not None:
             for diagnostic in diagnostic_values:
                 if diagnostic == 'max_jump_local':
-                    CG1 = FunctionSpace(self.mesh, "CG", 1)
-                    DG0 = FunctionSpace(self.mesh, "DG", 0)
                     required_fields.extend(['jump_du', 'du'])
                 elif diagnostic == 'max_jump_global':
                     required_fields.extend(['du'])
@@ -203,6 +212,12 @@ class DiagnosticVariables(object):
                     required_fields.extend(['du', 'du_smooth'])
                 elif diagnostic == 'min_du_smooth_loc':
                     required_fields.extend(['du', 'du_smooth'])
+                elif diagnostic == 'mu':
+                    required_fields.extend(['du'])
+                elif diagnostic == 'a':
+                    required_fields.extend(['a'])
+                elif diagnostic == 'b':
+                    required_fields.extend(['b'])
 
         for field in required_fields:
             if field not in self.fields.keys():

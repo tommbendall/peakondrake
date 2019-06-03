@@ -92,6 +92,9 @@ def experiment(code, Ld, tmax, resolutions=[],
         # create dimensions and variables
         data_file.createDimension('time', None)
         data_file.createVariable('time', float, ('time',))
+        data_file.createDimension('x', 100)
+        data_file.createVariable('x', float, ('x',))
+        data_file['x'][:] = np.linspace(0, Ld, num=100, endpoint=False)
 
         if 'resolution' in variable_parameters.keys():
             data_file.createDimension('resolution', len(variable_parameters['resolution'][1]))
@@ -108,7 +111,13 @@ def experiment(code, Ld, tmax, resolutions=[],
 
         if diagnostics is not None:
             for output in diagnostics:
-                data_file.createVariable(output, float, output_arguments)
+                if output == 'mu':
+                    for i in range(10):
+                        data_file.createVariable(output+'_'+str(i), float, output_arguments)
+                elif output in ('a', 'b'):
+                    data_file.createVariable(output, float, output_arguments+('x',))
+                else:
+                    data_file.createVariable(output, float, output_arguments)
         data_file.close()
 
         # we want to do a variable number of for loops so use recursive strategy

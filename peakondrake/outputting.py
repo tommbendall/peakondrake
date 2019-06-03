@@ -32,12 +32,15 @@ class Outputting(object):
             if isinstance(diagnostic_values, str):
                 dimensions = self.data_file[diagnostic_values].dimensions
             else:
-                dimensions = self.data_file[diagnostic_values[0]].dimensions
+                if diagnostic_values[0] != 'mu':
+                    dimensions = self.data_file[diagnostic_values[0]].dimensions
+                else:
+                    dimensions = self.data_file[diagnostic_values[0]+'_'+str(0)].dimensions
 
         index_list = []
         variable_list = []
         for dimension in dimensions:
-            if dimension != 'time':
+            if dimension not in ('time', 'x'):
                 variable_list.append(dimension)
                 index_list.append(simulation_parameters[dimension][0])
 
@@ -112,10 +115,23 @@ class Outputting(object):
                 output = find_max(self.diagnostic_variables.fields['du_smooth'], self.diagnostic_variables.smooth_coords)[1]
             elif diagnostic == 'min_du_smooth_loc':
                 output = find_min(self.diagnostic_variables.fields['du_smooth'], self.diagnostic_variables.smooth_coords)[1]
+            elif diagnostic == 'mu':
+                output = find_mus(u, self.diagnostic_variables.fields['du'], self.diagnostic_variables.coords)
+            elif diagnostic == 'a':
+                output = self.diagnostic_variables.fields['a'].at(self.data_file['x'][:], tolerance=1e-6)
+            elif diagnostic == 'b':
+                output = self.diagnostic_variables.fields['b'].at(self.data_file['x'][:], tolerance=1e-6)
             else:
                 raise ValueError('Diagnostic %s not recgonised.' % diagnostic)
 
-            self.data_file[diagnostic][[slice(self.t_idx,self.t_idx+1)]+self.index_slices] = output
+            if diagnostic in ('a', 'b'):
+                self.data_file[diagnostic][[slice(self.t_idx,self.t_idx+1)]+self.index_slices] = output
+            elif diagnostic == 'mu':
+                # we cannot store arrays of mus, so have to do them each separately
+                for i, mu in enumerate(output):
+                    self.data_file[diagnostic+'_'+str(i)][[slice(self.t_idx,self.t_idx+1)]+self.index_slices] = mu
+            else:
+                self.data_file[diagnostic][[slice(self.t_idx,self.t_idx+1)]+self.index_slices] = output
 
         self.t_idx += 1
 
@@ -143,3 +159,88 @@ def find_max(f, x):
     max_idx = np.argmax(f.dat.data[:])
     xmax = x.dat.data[max_idx]
     return (fmax, xmax)
+
+def find_mus(f, df, x):
+    list_of_mus = []
+    list_of_xmin = []
+    list_of_xmax = []
+    approx_peak_locations = []
+    approx_peak_indices = []
+    peak_heights = []
+    L = np.max(x.dat.data[:])
+
+    dof_count = len(df.dat.data[:])
+    # count number of peaks
+    for i in range(dof_count):
+        if df.dat.data[i-1] > 0 and df.dat.data[i] < 0:
+            # check that this is actually a peak
+            if f.at([0.5*(x.dat.data[i-1]+x.dat.data[i])], tolerance=1e-06) > 2*np.mean(f.dat.data[:]):
+                approx_peak_locations.append(x.dat.data[i])
+                approx_peak_indices.append(i)
+                peak_heights.append(f.at([0.5*(x.dat.data[i-1]+x.dat.data[i])], tolerance=1e-06))
+
+    sorted_peak_heights = peak_heights.copy()
+    sorted_peak_heights.sort(reverse=True)
+
+    # divide domain into different peak zones
+    dividing_points = []
+    dividing_indices = []
+    if len(approx_peak_locations) > 1:
+        for i in range(len(approx_peak_locations)):
+            if approx_peak_locations[i] > approx_peak_locations[i-1]:
+                dividing_indices.append(int(np.floor(0.5*(approx_peak_indices[i-1]+approx_peak_indices[i]))))
+            else:
+                dividing_indices.append(int(np.floor(0.5*((approx_peak_indices[i-1]+approx_peak_indices[i]+dof_count))))
+                                        % dof_count)
+            dividing_points.append(x.dat.data[dividing_indices[-1]])
+
+    # now look for max and min of df, in slices defined by dividing points
+    if len(approx_peak_locations) > 1:
+        for i in range(len(approx_peak_locations)):
+            if dividing_indices[i] > dividing_indices[i-1]:
+                max_idx = np.argmax(df.dat.data[dividing_indices[i-1]:dividing_indices[i]]) + dividing_indices[i-1]
+                min_idx = np.argmin(df.dat.data[dividing_indices[i-1]:dividing_indices[i]]) + dividing_indices[i-1]
+            else:
+                # if dividing_indices[i] == 0 we can't simply slice
+                if dividing_indices[i] == 0:
+                    max_idx = np.argmax(df.dat.data[dividing_indices[i-1]:]) + dividing_indices[i-1]
+                    min_idx = np.argmin(df.dat.data[dividing_indices[i-1]:]) + dividing_indices[i-1]
+                # similarly with dividing_indices[i-1] == len(approx_peak_locations) - 1
+                elif dividing_indices[i-1] == len(approx_peak_locations) - 1:
+                    max_idx = np.argmax(df.dat.data[0:dividing_indices[i-1]]) + dividing_indices[i-1]
+                    min_idx = np.argmin(df.dat.data[0:dividing_indices[i-1]]) + dividing_indices[i-1]
+                # otherwise, our zone is at the start and end of the list, so we need to compare each patch of the list
+                else:
+                    max_idx_lower = np.argmax(df.dat.data[0:dividing_indices[i]])
+                    max_idx_upper = np.argmax(df.dat.data[dividing_indices[i-1]:]) + dividing_indices[i-1]
+                    min_idx_lower = np.argmin(df.dat.data[0:dividing_indices[i]])
+                    min_idx_upper = np.argmin(df.dat.data[dividing_indices[i-1]:]) + dividing_indices[i-1]
+                    max_idx = max_idx_lower if df.dat.data[max_idx_lower] > df.dat.data[max_idx_upper] else max_idx_upper
+                    min_idx = min_idx_lower if df.dat.data[min_idx_lower] < df.dat.data[min_idx_upper] else min_idx_upper
+            xmax = x.dat.data[max_idx]
+            xmin = x.dat.data[min_idx]
+
+            # only append if one of the 10 highest peaks
+            if len(approx_peak_locations) < 11 or peak_heights[i] > sorted_peak_heights[10]:
+                if abs(xmin - xmax) < L / 2:
+                    list_of_mus.append(abs(xmin - xmax))
+                else:
+                    list_of_mus.append(L - abs(xmin - xmax))
+                list_of_xmax.append(xmax)
+                list_of_xmin.append(xmin)
+    else:
+        # just do straightforward thing if there is only one peak
+        max_idx = np.argmax(df.dat.data[:])
+        xmax = x.dat.data[max_idx]
+        min_idx = np.argmin(df.dat.data[:])
+        xmin = x.dat.data[min_idx]
+        if abs(xmin - xmax) < L / 2:
+            list_of_mus.append(abs(xmin - xmax))
+        else:
+            list_of_mus.append(L - abs(xmin - xmax))
+        list_of_xmax.append(xmax)
+        list_of_xmin.append(xmin)
+
+    # print(approx_peak_locations, dividing_points, list_of_xmax, list_of_xmin, list_of_mus)
+
+    return list_of_mus

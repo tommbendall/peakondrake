@@ -1,6 +1,6 @@
 from firedrake import (Interpolator, Constant, as_vector, sin,
                        cos, exp, FunctionSpace, VectorFunctionSpace,
-                       pi, SpatialCoordinate)
+                       pi, SpatialCoordinate, Function)
 import numpy as np
 
 class StochasticFunctions(object):
@@ -20,6 +20,9 @@ class StochasticFunctions(object):
         self.num_Xis = simulation_parameters['num_Xis'][-1]
         self.Xi_family = simulation_parameters['Xi_family'][-1]
         self.Xi = prognostic_variables.Xi
+        self.pure_xis = prognostic_variables.pure_xis
+        for xi in range(self.num_Xis):
+            self.pure_xis.append(Function(self.Xi.function_space()))
         self.dWs = [Constant(0.0) for dw in range(self.num_Xis)]
         self.Xi_functions = []
         self.sigma_kick = simulation_parameters['sigma_kick'][-1]
@@ -39,22 +42,40 @@ class StochasticFunctions(object):
 
         if self.Xi_family == 'sines':
             for n in range(self.num_Xis):
-                if (n+1) % 2 == 0:
+                if (n+1) % 2 == 1:
                     self.Xi_functions.append(sin(2*(n+1)*pi*x/Ld))
                 else:
                     self.Xi_functions.append(cos(2*(n+1)*pi*x/Ld))
 
         elif self.Xi_family == 'gaussians':
             for n in range(self.num_Xis):
-                    self.Xi_functions.append(0.5*self.num_Xis*exp(-((x-Ld*(n+1)/(self.num_Xis +1.0))/2.)**2))
+                self.Xi_functions.append(0.5*self.num_Xis*exp(-((x-Ld*(n+1)/(self.num_Xis +1.0))/2.)**2))
+
+        elif self.Xi_family == 'quadratic':
+            if n > 1:
+                raise NotImplementedError('Quadratic Xi not yet implemented for more than one Xi')
+            else:
+                self.Xi_functions.append(conditional(x > Ld/4,
+                                                     conditional(x > 3*Ld/8,
+                                                                 conditional(x > 5*Ld/8,
+                                                                             conditional(x < 3*Ld/4,
+                                                                                         (x - 3*Ld/4)**2,
+                                                                                         0.0),
+                                                                             (x-Ld/2)**2+Ld**2/32),
+                                                                 (x-Ld/4)**2),
+                                                     0.0))
 
         else:
             raise NotImplementedError('Xi_family %s not implemented' % self.Xi_family)
 
         Xi_expr = 0.0*x
 
-        for dW, Xi_function in zip(self.dWs, self.Xi_functions):
+        for dW, Xi_function, pure_xi in zip(self.dWs, self.Xi_functions, self.pure_xis):
             Xi_expr += dW * Xi_function
+            if simulation_parameters['scheme'][-1] == 'upwind':
+                pure_xi.interpolate(as_vector([Xi_function]))
+            else:
+                pure_xi.interpolate(Xi_function)
 
         if simulation_parameters['scheme'][-1] == 'upwind':
             self.Xi_interpolator = Interpolator(as_vector([Xi_expr]), self.Xi)

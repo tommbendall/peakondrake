@@ -1,24 +1,26 @@
 from peakondrake import *
 
-code = 'test_kdv'
+
+code = 'skdv_phase_flat'
 Ld = 40.
-dt = 0.01
-tmax = 10
+dt = 0.001
+tmax = 500
 
 experiment(code, Ld, tmax,
            resolutions=200,
            dts=dt,
            sigmas=0.2,
-           seeds=0,
+           seeds=range(50),
            schemes='conforming',
            timesteppings='midpoint',
-           ics='one_peak',
+           ics='flat',
            num_Xis=1,
-           Xi_family='sines',
+           Xi_family='gaussians',
            alphasq=0.0,
            c0=0.,
            gamma=1.0,
-           diagnostics=['l2_u'],
+           diagnostics=['l2_u', 'a', 'b'],
            fields_to_output=[],
-           ndump=int(tmax / (100 * dt)),
-           field_ndump=int(tmax / (100 * dt)))
+           ndump=int(tmax / (10000 * dt)),
+           field_ndump=int(tmax / (10000 * dt)),
+           allow_fail=True)

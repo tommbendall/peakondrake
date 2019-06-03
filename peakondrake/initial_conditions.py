@@ -1,7 +1,7 @@
-from firedrake import (dx, conditional, exp, as_vector, dot,
+from firedrake import (dx, conditional, exp, as_vector, dot, pi,
                        Function, NonlinearVariationalSolver,
                        TestFunction, NonlinearVariationalProblem,
-                       SpatialCoordinate, Constant, FunctionSpace)
+                       SpatialCoordinate, Constant, FunctionSpace, cosh)
 
 def build_initial_conditions(prognostic_variables, simulation_parameters):
 
@@ -26,7 +26,9 @@ def build_initial_conditions(prognostic_variables, simulation_parameters):
                'gaussian_narrow': 0.5*exp(-((x-10.)/1.)**2),
                'gaussian_wide': 0.5*exp(-((x-10.)/3.)**2),
                'peakon': conditional(x < 20., exp((x-20.)/1.), exp(-(x-20.)/1.)),
-               'one_peak': 0.5*2/(exp(x-203./15.)+exp(-x+203./15.))}
+               'one_peak': 0.5*2/(exp(x-203./15.)+exp(-x+203./15.)),
+               'flat': Constant(2*pi**2/(9*40**2)),
+               'coshes': Constant(2000)*cosh((2000**0.5/2)*(x-0.75))**(-2)+Constant(1000)*cosh(1000**0.5/2*(x-0.25))**(-2)}
 
     ic_expr = ic_dict[ic]
 
