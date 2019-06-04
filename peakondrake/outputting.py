@@ -86,7 +86,7 @@ class Outputting(object):
 
         for diagnostic in self.diagnostic_values:
             if failed:
-                output = np.nan
+                output = [np.nan] if diagnostic == 'mu' else np.nan
             elif diagnostic == 'energy':
                 output = assemble((dot(u, u) + alphasq*dot(u.dx(0),u.dx(0)))*dx)
             elif diagnostic == 'l2_m':
@@ -240,7 +240,5 @@ def find_mus(f, df, x):
             list_of_mus.append(L - abs(xmin - xmax))
         list_of_xmax.append(xmax)
         list_of_xmin.append(xmin)
-
-    # print(approx_peak_locations, dividing_points, list_of_xmax, list_of_xmin, list_of_mus)
 
     return list_of_mus
