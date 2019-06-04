@@ -1,6 +1,6 @@
 from firedrake import (Interpolator, Constant, as_vector, sin,
                        cos, exp, FunctionSpace, VectorFunctionSpace,
-                       pi, SpatialCoordinate, Function)
+                       pi, SpatialCoordinate, Function, conditional)
 import numpy as np
 
 class StochasticFunctions(object):
@@ -52,10 +52,10 @@ class StochasticFunctions(object):
                 self.Xi_functions.append(0.5*self.num_Xis*exp(-((x-Ld*(n+1)/(self.num_Xis +1.0))/2.)**2))
 
         elif self.Xi_family == 'quadratic':
-            if n > 1:
+            if self.num_Xis > 1:
                 raise NotImplementedError('Quadratic Xi not yet implemented for more than one Xi')
             else:
-                self.Xi_functions.append(conditional(x > Ld/4,
+                self.Xi_functions.append(32/(Ld*Ld)*conditional(x > Ld/4,
                                                      conditional(x > 3*Ld/8,
                                                                  conditional(x > 5*Ld/8,
                                                                              conditional(x < 3*Ld/4,

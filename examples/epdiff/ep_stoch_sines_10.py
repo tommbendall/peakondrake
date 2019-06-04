@@ -5,7 +5,7 @@ code = 'ep_peak_new_mu_sines_10'
 Ld = 40.
 dt = 0.0002
 tmax = 40
-i = 0
+i = 9
 code += '_'+str(i)
 
 experiment(code, Ld, tmax,
