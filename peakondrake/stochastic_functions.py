@@ -27,6 +27,10 @@ class StochasticFunctions(object):
         self.Xi_functions = []
         self.sigma_kick = simulation_parameters['sigma_kick'][-1]
         self.t_kick = simulation_parameters['t_kick'][-1]
+        self.smooth_t = simulation_parameters['smooth_t'][-1]
+
+        if self.smooth_t is not None and len(self.t_kick) > 0:
+            raise ValueError('smooth_t and t_kick are incompatible options')
 
         seed = simulation_parameters['seed'][-1]
         np.random.seed(seed)
@@ -89,7 +93,9 @@ class StochasticFunctions(object):
         Updates the Xi function for the next time step.
         """
         if self.num_Xis > 0:
-            if len(self.t_kick) > 0 and np.min(self.t_kick) < t < np.max(self.t_kick):
+            if self.smooth_t is not None:
+                [dw.assign(self.sigma*self.smooth_t(t)) for dw in self.dWs]
+            elif len(self.t_kick) > 0 and np.min(self.t_kick) < t < np.max(self.t_kick):
                 [dw.assign(self.sigma_kick*np.random.randn()) for dw in self.dWs]
             else:
                 [dw.assign(self.sigma*np.random.randn()) for dw in self.dWs]
