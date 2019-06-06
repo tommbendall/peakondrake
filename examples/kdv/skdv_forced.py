@@ -2,7 +2,7 @@ from peakondrake import *
 from firedrake import sin, pi
 
 
-code = 'skdv_one_gaussian'
+code = 'skdv_forced'
 Ld = 40.
 dt = 0.001
 tmax = 500
