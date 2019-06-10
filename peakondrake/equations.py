@@ -103,6 +103,12 @@ class Equations(object):
                 self.Xi = prognostic_variables.Xi
                 self.u0 = Function(Vu).assign(self.u)
 
+                zeta = TestFunction(Vm)
+                m_eqn = zeta * self.m * dx - zeta * self.u0 * dx - alphasq * zeta.dx(0) * self.u0.dx(0) * dx
+                m_prob = NonlinearVariationalProblem(m_eqn, self.m)
+                m_solver = NonlinearVariationalSolver(m_prob)
+                m_solver.solve()
+
                 W = MixedFunctionSpace((Vu, Vm))
                 psi, phi = TestFunctions(W)
 
@@ -129,31 +135,32 @@ class Equations(object):
 
 
             elif self.scheme == 'hydrodynamic' and self.timestepping == 'midpoint':
-                Vm = prognostic_variables.Vm
                 Vu = prognostic_variables.Vu
 
                 self.u = prognostic_variables.u
-                self.m = prognostic_variables.m
-                self.Xi = prognostic_variables.Xi
-                self.u0 = Function(Vu).assign(self.u)
 
-                W = MixedFunctionSpace((Vu,)*5)
-                psi, phi, zeta, nu, iota = TestFunctions(W)
+                W = MixedFunctionSpace((Vu,)*3)
+                psi, phi, zeta = TestFunctions(W)
 
                 w1 = Function(W)
-                self.u1, self.m1 = split(w1)
+                self.u1, dFh, dGh = split(w1)
+
                 uh  = (self.u1 + self.u) / 2
-                mh = (self.m1 + self.m) / 2
-                us = Dt * uh + sqrt(Dt) * self.Xi
+                dXi = sqrt(Dt) * prognostic_variables.Xi
+                dXi_x = sqrt(Dt) * prognostic_variables.Xi_x
+                dXi_xx = sqrt(Dt) * prognostic_variables.Xi_xx
+                dvh = Dt * uh + dXi
 
-                Lu = (psi * (self.m1 - self.m) * dx
-                      - psi.dx(0) * mh * us * dx
-                      + psi * mh * us.dx(0) * dx
-                      - phi * self.m1 * dx
-                      + phi * self.u1 * dx
-                      + alphasq * phi.dx(0) * self.u1.dx(0) * dx)
+                Lu = (psi * (self.u1 - self.u) * dx
+                      + psi * uh.dx(0) * dvh * dx
+                      - psi.dx(0) * dFh * dx
+                      + psi * dGh * dx
+                      + phi * dFh * dx + alphasq * phi.dx(0) * dFh.dx(0) * dx
+                      - phi * uh * uh * Dt * dx - 0.5 * alphasq * phi * uh.dx(0) * uh.dx(0) * Dt * dx
+                      + zeta * dGh * dx + alphasq * zeta.dx(0) * dGh.dx(0) * dx
+                      - 2 * zeta * uh * dXi_x * dx - alphasq * zeta * uh.dx(0) * dXi_xx * dx)
 
-                self.u1, self.m1 = w1.split()
+                self.u1, dFh, dGh = w1.split()
 
                 uprob = NonlinearVariationalProblem(Lu, w1)
                 self.usolver = NonlinearVariationalSolver(uprob,
@@ -247,7 +254,8 @@ class Equations(object):
                 self.m.assign(self.m1)
 
         elif self.scheme == 'hydrodynamic' and self.timestepping == 'midpoint':
-            raise NotImplementedError('this is not yet implemented')
+            self.usolver.solve()
+            self.u.assign(self.u1)
 
         else:
             raise ValueError('Scheme %s and timestepping %s either not compatible or not recognised.' % (self.scheme, self.timestepping))

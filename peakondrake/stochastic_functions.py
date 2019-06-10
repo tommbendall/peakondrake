@@ -1,6 +1,8 @@
 from firedrake import (Interpolator, Constant, as_vector, sin,
                        cos, exp, FunctionSpace, VectorFunctionSpace,
-                       pi, SpatialCoordinate, Function, conditional)
+                       pi, SpatialCoordinate, Function, conditional,
+                       dx, TestFunction, NonlinearVariationalSolver,
+                       NonlinearVariationalProblem)
 import numpy as np
 
 class StochasticFunctions(object):
@@ -16,6 +18,7 @@ class StochasticFunctions(object):
         mesh = simulation_parameters['mesh'][-1]
         x, = SpatialCoordinate(mesh)
         Ld = simulation_parameters['Ld'][-1]
+        self.scheme = simulation_parameters['scheme'][-1]
 
         self.num_Xis = simulation_parameters['num_Xis'][-1]
         self.Xi_family = simulation_parameters['Xi_family'][-1]
@@ -72,19 +75,69 @@ class StochasticFunctions(object):
         else:
             raise NotImplementedError('Xi_family %s not implemented' % self.Xi_family)
 
+        # make lists of functions for xi_x, xi_xx and xi_xxx
+        if self.scheme == 'hydrodynamic':
+            self.Xi_x = prognostic_variables.Xi_x
+            self.Xi_xx = prognostic_variables.Xi_xx
+            self.Xi_xxx = prognostic_variables.Xi_xxx
+
+            self.Xi_x_functions = []
+            self.Xi_xx_functions = []
+            self.Xi_xxx_functions = []
+
+            for Xi_expr in self.Xi_functions:
+                Xi_x_function = Function(self.Xi_x.function_space())
+                Xi_xx_function = Function(self.Xi_xx.function_space())
+
+                phi_x = TestFunction(self.Xi_x.function_space())
+                phi_xx = TestFunction(self.Xi_xx.function_space())
+
+                Xi_x_eqn = phi_x * Xi_x_function * dx + phi_x.dx(0) * Xi_expr * dx
+                Xi_xx_eqn = phi_xx * Xi_xx_function * dx + phi_xx.dx(0) * Xi_x_function * dx
+
+                Xi_x_problem = NonlinearVariationalProblem(Xi_x_eqn, Xi_x_function)
+                Xi_xx_problem = NonlinearVariationalProblem(Xi_xx_eqn, Xi_xx_function)
+
+                Xi_x_solver = NonlinearVariationalSolver(Xi_x_problem)
+                Xi_xx_solver = NonlinearVariationalSolver(Xi_xx_problem)
+
+                Xi_x_solver.solve()
+                Xi_xx_solver.solve()
+
+                self.Xi_x_functions.append(Xi_x_function)
+                self.Xi_xx_functions.append(Xi_xx_function)
+
+        # now make a master xi
         Xi_expr = 0.0*x
 
         for dW, Xi_function, pure_xi in zip(self.dWs, self.Xi_functions, self.pure_xis):
             Xi_expr += dW * Xi_function
-            if simulation_parameters['scheme'][-1] == 'upwind':
+            if self.scheme == 'upwind':
                 pure_xi.interpolate(as_vector([Xi_function]))
             else:
                 pure_xi.interpolate(Xi_function)
 
-        if simulation_parameters['scheme'][-1] == 'upwind':
+        if self.scheme == 'upwind':
             self.Xi_interpolator = Interpolator(as_vector([Xi_expr]), self.Xi)
         else:
             self.Xi_interpolator = Interpolator(Xi_expr, self.Xi)
+
+        if self.scheme == 'hydrodynamic':
+
+            # initialise blank expressions
+            Xi_x_expr = 0.0*x
+            Xi_xx_expr = 0.0*x
+            Xi_xxx_expr = 0.0*x
+
+            # make full expressions by adding all dW * Xi_xs
+            for dW, Xi_x_function, Xi_xx_function, Xi_xxx_function in zip(self.dWs, self.Xi_x_functions, self.Xi_xx_functions, self.Xi_xxx_functions):
+                Xi_x_expr += dW * Xi_x_function
+                Xi_xx_expr += dW * Xi_xx_function
+                Xi_xxx_expr += dW * Xi_xxx_function
+
+            self.Xi_x_interpolator = Interpolator(Xi_x_expr, self.Xi_x)
+            self.Xi_xx_interpolator = Interpolator(Xi_xx_expr, self.Xi_xx)
+            self.Xi_xxx_interpolator = Interpolator(Xi_xxx_expr, self.Xi_xxx)
 
 
 
@@ -100,5 +153,9 @@ class StochasticFunctions(object):
             else:
                 [dw.assign(self.sigma*np.random.randn()) for dw in self.dWs]
             self.Xi_interpolator.interpolate()
+
+            if self.scheme == 'hydrodynamic':
+                self.Xi_x_interpolator.interpolate()
+                self.Xi_xx_interpolator.interpolate()
         else:
             pass

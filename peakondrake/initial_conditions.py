@@ -52,7 +52,7 @@ def build_initial_conditions(prognostic_variables, simulation_parameters):
         msolver0.solve()
         prognostic_variables.m.interpolate(m_CG)
 
-    elif prognostic_variables.scheme == 'conforming':
+    elif prognostic_variables.scheme in ('conforming', 'hydrodynamic'):
         VCG5 = FunctionSpace(mesh, "CG", 5)
         smooth_condition = Function(VCG5).interpolate(ic_expr)
         prognostic_variables.u.project(smooth_condition)

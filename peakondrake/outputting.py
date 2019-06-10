@@ -241,4 +241,6 @@ def find_mus(f, df, x):
         list_of_xmax.append(xmax)
         list_of_xmin.append(xmin)
 
+    # print(list_of_mus, list_of_xmax, approx_peak_locations, list_of_xmin)
+
     return list_of_mus

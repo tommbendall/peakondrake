@@ -38,6 +38,7 @@ def simulation(simulation_parameters,
     tmax = simulation_parameters['tmax'][-1]
     ndump = simulation_parameters['ndump'][-1]
     field_ndump = simulation_parameters['field_ndump'][-1]
+    nXi_update = simulation_parameters['nXi_update'][-1]
     file_name = simulation_parameters['file_name'][-1]
     scheme = simulation_parameters['scheme'][-1]
     allow_fail = simulation_parameters['allow_fail'][-1]
@@ -61,6 +62,8 @@ def simulation(simulation_parameters,
 
     dumpn = 0
     field_dumpn = 0
+    # want the update to always happen on first time step (so results are consistent with earlier results)
+    Xi_update_n = nXi_update - 1 if nXi_update > 0 else 0
     t = 0
     failed = False
 
@@ -69,7 +72,10 @@ def simulation(simulation_parameters,
         t += dt
 
         # update stochastic basis functions
-        Xis.update(t)
+        Xi_update_n += 1
+        if Xi_update_n == nXi_update:
+            Xis.update(t)
+            Xi_update_n -= nXi_update
 
         # solve problems
         if allow_fail:
@@ -130,15 +136,23 @@ class PrognosticVariables(object):
             self.Vf = FunctionSpace(mesh, "CG", 1)
             self.fields['u'] = self.u
             self.Vm = FunctionSpace(mesh, "CG", 1)
-            self.m = Function(self.Vm)
+            self.m = Function(self.Vm, name='m')
             self.fields['m'] = self.m
         elif scheme == 'hydrodynamic':
-            self.Vf = FunctionSpace(mesh, "CG", 1)
             self.Vu = FunctionSpace(mesh, "CG", 1)
-            self.f = Function(self.Vf, name='f')
             self.u = Function(self.Vu, name='u')
+            self.Xi_x = Function(self.Vu, name='Xi_x')
+            self.Xi_xx = Function(self.Vu, name='Xi_xx')
+            self.Xi_xxx = Function(self.Vu, name='Xi_xxx')
             self.fields['u'] = self.u
-            self.fields['f'] = self.f
+            self.fields['Xi_x'] = self.Xi_x
+            self.fields['Xi_xx'] = self.Xi_xx
+            self.fields['Xi_xxx'] = self.Xi_xxx
+
+            # self.dF = Function(self.Vu, name='dF')
+            # self.dG = Function(self.Vu, name='dG')
+            # self.fields['dF'] = self.dF
+            # self.fields['dG'] = self.dG
         else:
             raise ValueError('Scheme not recognised.')
 
