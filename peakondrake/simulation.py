@@ -5,6 +5,7 @@ from peakondrake.equations import *
 from peakondrake.diagnostic_equations import *
 from peakondrake.stochastic_functions import *
 from peakondrake.outputting import *
+import numpy as np
 
 def simulation(simulation_parameters,
                diagnostic_values=None,
@@ -66,6 +67,7 @@ def simulation(simulation_parameters,
     Xi_update_n = nXi_update - 1 if nXi_update > 0 else 0
     t = 0
     failed = False
+    failed_time = np.nan
 
     # run simulation
     while (t < tmax - 0.5*dt):
@@ -84,6 +86,7 @@ def simulation(simulation_parameters,
                     equations.solve()
                 except ConvergenceError:
                     failed = True
+                    failed_time = t
                     print("Solver failed at t = %f" % t)
         else:
             equations.solve()
@@ -108,6 +111,7 @@ def simulation(simulation_parameters,
                 outputting.dump_fields(t)
                 field_dumpn -= field_ndump
 
+    outputting.store_times(failed_time)
 
 class PrognosticVariables(object):
     """

@@ -109,6 +109,7 @@ def experiment(code, Ld, tmax, resolutions=[],
                 for j, value in enumerate(values[1]):
                     data_file[key][j:j+1] = value
 
+        # create diagnostic variables, with dimensions dependent upon parameters
         if diagnostics is not None:
             for output in diagnostics:
                 if output == 'mu':
@@ -118,6 +119,12 @@ def experiment(code, Ld, tmax, resolutions=[],
                     data_file.createVariable(output, float, output_arguments+('x',))
                 else:
                     data_file.createVariable(output, float, output_arguments)
+
+        # create diagnostics for wallclock time and failure time
+        data_file.createDimension('wallclock_times', 2)
+        data_file.createVariable('wallclock_time', float, ('wallclock_times',) + tuple(variable_parameters.keys()))
+        data_file.createVariable('failed_time', float, tuple(variable_parameters.keys()))
+
         data_file.close()
 
         # we want to do a variable number of for loops so use recursive strategy

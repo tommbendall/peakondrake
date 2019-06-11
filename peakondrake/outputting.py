@@ -2,6 +2,7 @@ from firedrake import (File, assemble, dx, dS, norm, dot,
                        Function, op2)
 from netCDF4 import Dataset
 import numpy as np
+from datetime import datetime
 
 class Outputting(object):
     """
@@ -67,6 +68,9 @@ class Outputting(object):
         for key, value in simulation_parameters.items():
             if len(value) > 1:
                 self.out_string += str(key) + ' = %s, ' % str(value[0])
+
+        # write initial wallclock time
+        self.data_file['wallclock_time'][[slice(0,1)]+self.index_slices] = datetime.now().timestamp()
 
     def dump_diagnostics(self, t, failed=False):
         """
@@ -152,6 +156,16 @@ class Outputting(object):
 
         if self.field_ndump > 0:
             self.field_file.write(*self.dumpfields, time=t)
+
+    def store_times(self, failed_time):
+        """
+        Store the final wallclock time and the time at which the run failed.
+        """
+
+        self.data_file['wallclock_time'][[slice(1,2)]+self.index_slices] = datetime.now().timestamp()
+        self.data_file['failed_time'][self.index_slices] = failed_time
+
+
 
 
 def find_min(f, x):
