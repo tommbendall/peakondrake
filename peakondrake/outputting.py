@@ -163,7 +163,10 @@ class Outputting(object):
         """
 
         self.data_file['wallclock_time'][[slice(1,2)]+self.index_slices] = datetime.now().timestamp()
-        self.data_file['failed_time'][self.index_slices] = failed_time
+        if len(self.index_slices) == 0:
+            self.data_file['failed_time'][0] = failed_time
+        else:
+            self.data_file['failed_time'][self.index_slices] = failed_time
 
 
 

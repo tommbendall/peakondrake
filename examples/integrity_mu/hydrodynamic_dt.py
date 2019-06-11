@@ -1,8 +1,12 @@
 from peakondrake import *
+from netCDF4 import Dataset
+from datetime import datetime
 
 base_code = 'integrity_hydrodynamic_dt'
 Ld = 40.
 tmax = 50
+
+starttime = datetime.now()
 
 dts = [0.00001, 0.0001, 0.001, 0.01]
 
@@ -29,3 +33,20 @@ for i, dt in enumerate(dts):
                field_ndump=int(tmax / (10 * dt)),
                allow_fail=True,
                nXi_update=int(np.max(dts)/dt))
+
+endtime = datetime.now()
+print(base_code)
+print('Total runtime was %i' % (endtime - starttime).seconds)
+
+for i, dt in enumerate(dts):
+    code = base_code + '_'+str(i)
+    data = Dataset('results/'+code+'/data.nc', 'r')
+    runtimes = []
+    failed_times = data['failed_time'][:]
+
+    for j, k in zip(data['wallclock_time'][0,:], data['wallclock_time'][1,:]):
+        runtimes.append((datetime.fromtimestamp(k) - datetime.fromtimestamp(j)).seconds)
+
+    print('dt', i, 'runtimes', runtimes)
+    print('dt', i, 'failed times', failed_times)
+    print('')
