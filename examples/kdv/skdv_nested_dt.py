@@ -2,7 +2,7 @@ from peakondrake import *
 
 dts = [0.012, 0.006, 0.004, 0.003, 0.002]
 i = 0
-code = 'skdv_sqrt_nested_dt_'+str(i)
+code = 'skdv_nested_dt_'+str(i)
 Ld = 40.
 dt = dts[i]
 tmax = 120
@@ -11,7 +11,7 @@ nXi_update = int(0.012/dt)
 experiment(code, Ld, tmax,
            resolutions=200,
            dts=dt,
-           sigmas=0.2*(dts[0]/dt)**0.5,
+           sigmas=0.2,
            seeds=range(20),
            schemes='conforming',
            timesteppings='midpoint',

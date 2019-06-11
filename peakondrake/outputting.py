@@ -121,6 +121,12 @@ class Outputting(object):
                 output = self.diagnostic_variables.fields['a'].at(self.data_file['x'][:], tolerance=1e-6)
             elif diagnostic == 'b':
                 output = self.diagnostic_variables.fields['b'].at(self.data_file['x'][:], tolerance=1e-6)
+            elif diagnostic == 'l2_kdv_1':
+                output = norm(self.diagnostic_variables.fields['kdv_1'], norm_type='L2')
+            elif diagnostic == 'l2_kdv_2':
+                output = norm(self.diagnostic_variables.fields['kdv_2'], norm_type='L2')
+            elif diagnostic == 'l2_kdv_3':
+                output = norm(self.diagnostic_variables.fields['kdv_3'], norm_type='L2')
             else:
                 raise ValueError('Diagnostic %s not recgonised.' % diagnostic)
 

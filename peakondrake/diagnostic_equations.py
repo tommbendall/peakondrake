@@ -3,7 +3,8 @@ from firedrake import (Projector, Interpolator, as_vector, Constant,
                        TrialFunction, LinearVariationalProblem, dx,
                        LinearVariationalSolver, dS, jump, VectorElement,
                        NonlinearVariationalSolver, NonlinearVariationalProblem,
-                       FunctionSpace, SpatialCoordinate)
+                       FunctionSpace, SpatialCoordinate, sqrt, split, MixedFunctionSpace,
+                       TestFunctions)
 
 
 class DiagnosticEquations(object):
@@ -21,7 +22,10 @@ class DiagnosticEquations(object):
         self.diagnostic_variables = diagnostic_variables
         self.prognostic_variables = prognostic_variables
         self.simulation_parameters = simulation_parameters
+        Dt = Constant(simulation_parameters['dt'][-1])
         u = self.prognostic_variables.u
+        Xi = self.prognostic_variables.Xi
+        Vu = u.function_space()
         ones = Function(VectorFunctionSpace(self.prognostic_variables.mesh, "CG", 1)).project(as_vector([Constant(1.0)]))
         self.interpolators = []
         self.projectors = []
@@ -94,6 +98,7 @@ class DiagnosticEquations(object):
                 self.projectors.append(projector)
 
             elif key == 'a':
+                # find  6 * u_x * Xi + gamma * Xi_xxx
                 mesh = u.function_space().mesh()
                 gamma = simulation_parameters['gamma'][-1]
                 a_flux = self.diagnostic_variables.fields['a']
@@ -120,6 +125,7 @@ class DiagnosticEquations(object):
                 self.projectors.append(projector)
 
             elif key == 'b':
+                # find 12 * u * Xi_x
                 mesh = u.function_space().mesh()
                 gamma = simulation_parameters['gamma'][-1]
                 b_flux = self.diagnostic_variables.fields['b']
@@ -131,6 +137,56 @@ class DiagnosticEquations(object):
                     b_expr += 12*u*xi.dx(0)
                 projector = Projector(b_expr, b_flux)
                 self.projectors.append(projector)
+
+            elif key == 'kdv_1':
+                # find the first part of the kdv form
+                u0 = prognostic_variables.u0
+                uh = (u + u0) / 2
+                us = Dt * uh + sqrt(Dt) * Xi
+                psi = TestFunction(Vu)
+                du_1 = self.diagnostic_variables.fields['kdv_1']
+
+                eqn = psi * du_1 * dx - 6 * psi.dx(0) * uh * us * dx
+                prob = NonlinearVariationalProblem(eqn, du_1)
+                solver = NonlinearVariationalSolver(prob)
+                self.solvers.append(solver)
+
+            elif key == 'kdv_2':
+                # find the second part of the kdv form
+                u0 = prognostic_variables.u0
+                uh = (u + u0) / 2
+                us = Dt * uh + sqrt(Dt) * Xi
+                psi = TestFunction(Vu)
+                du_2 = self.diagnostic_variables.fields['kdv_2']
+
+                eqn = psi * du_2 * dx + 6 * psi * uh * us.dx(0) * dx
+                prob = NonlinearVariationalProblem(eqn, du_2)
+                solver = NonlinearVariationalSolver(prob)
+                self.solvers.append(solver)
+
+            elif key == 'kdv_3':
+                # find the third part of the kdv form
+                u0 = prognostic_variables.u0
+                uh = (u + u0) / 2
+                us = Dt * uh + sqrt(Dt) * Xi
+                du_3 = self.diagnostic_variables.fields['kdv_3']
+                gamma = simulation_parameters['gamma'][-1]
+
+                phi = TestFunction(Vu)
+                F = Function(Vu)
+
+                eqn = (phi * F * dx + phi.dx(0) * us.dx(0) * dx)
+                prob = NonlinearVariationalProblem(eqn, F)
+                solver = NonlinearVariationalSolver(prob)
+                self.solvers.append(solver)
+
+                self.projectors.append(Projector(-gamma * F.dx(0), du_3))
+
+                # nu = TestFunction(Vu)
+                # back_eqn = nu * du_3 * dx - gamma * nu.dx(0) * F * dx
+                # back_prob = NonlinearVariationalProblem(back_eqn, du_3)
+                # back_solver = NonlinearVariationalSolver(back_prob)
+                # self.solvers.append(solver)
 
             else:
                 raise NotImplementedError('Diagnostic %s not yet implemented' % key)

@@ -101,7 +101,7 @@ class Equations(object):
                 self.u = prognostic_variables.u
                 self.m = prognostic_variables.m
                 self.Xi = prognostic_variables.Xi
-                self.u0 = Function(Vu).assign(self.u)
+                self.u0 = prognostic_variables.u0.assign(self.u)
 
                 zeta = TestFunction(Vm)
                 m_eqn = zeta * self.m * dx - zeta * self.u0 * dx - alphasq * zeta.dx(0) * self.u0.dx(0) * dx
@@ -185,17 +185,17 @@ class Equations(object):
 
                 self.u = prognostic_variables.u
                 self.Xi = prognostic_variables.Xi
-                self.u0 = Function(Vu).assign(self.u)
+                self.u0 = prognostic_variables.u0
 
                 W = MixedFunctionSpace((Vu, Vf))
                 psi, phi = TestFunctions(W)
 
                 w1 = Function(W)
                 self.u1, Fh = split(w1)
-                uh = (self.u1 + self.u0) / 2
+                uh = (self.u1 + self.u) / 2
                 us = Dt * uh + sqrt(Dt) * self.Xi
 
-                Lu = (psi * (self.u1 - self.u0) * dx
+                Lu = (psi * (self.u1 - self.u) * dx
                       - 6 * psi.dx(0) * uh * us * dx
                       + 6 * psi * uh * us.dx(0) * dx
                       - gamma * psi.dx(0) * Fh * dx
@@ -246,8 +246,8 @@ class Equations(object):
         elif self.scheme == 'conforming' and self.timestepping == 'midpoint':
             if self.setup == 'kdv':
                 self.usolver.solve()
-                self.u.assign(self.u1)
                 self.u0.assign(self.u)
+                self.u.assign(self.u1)
             elif self.setup == 'ch':
                 self.usolver.solve()
                 self.u.assign(self.u1)

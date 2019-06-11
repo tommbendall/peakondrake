@@ -133,6 +133,7 @@ class PrognosticVariables(object):
         elif scheme == 'conforming':
             self.Vu = FunctionSpace(mesh, "CG", 1)
             self.u = Function(self.Vu, name='u')
+            self.u0 = Function(self.Vu, name='u0')
             self.Vf = FunctionSpace(mesh, "CG", 1)
             self.fields['u'] = self.u
             self.Vm = FunctionSpace(mesh, "CG", 1)
@@ -147,12 +148,6 @@ class PrognosticVariables(object):
             self.fields['u'] = self.u
             self.fields['Xi_x'] = self.Xi_x
             self.fields['Xi_xx'] = self.Xi_xx
-            self.fields['Xi_xxx'] = self.Xi_xxx
-
-            # self.dF = Function(self.Vu, name='dF')
-            # self.dG = Function(self.Vu, name='dG')
-            # self.fields['dF'] = self.dF
-            # self.fields['dG'] = self.dG
         else:
             raise ValueError('Scheme not recognised.')
 
@@ -201,6 +196,12 @@ class DiagnosticVariables(object):
                 V = FunctionSpace(self.mesh, "CG", 1)
             elif field == 'b':
                 V = FunctionSpace(self.mesh, "CG", 1)
+            elif field == 'kdv_1':
+                V = FunctionSpace(self.mesh, "CG", 1)
+            elif field == 'kdv_2':
+                V = FunctionSpace(self.mesh, "CG", 1)
+            elif field == 'kdv_3':
+                V = FunctionSpace(self.mesh, "CG", 1)
             else:
                 raise ValueError('Output field %s not recognised.' % field)
 
@@ -232,6 +233,12 @@ class DiagnosticVariables(object):
                     required_fields.extend(['a'])
                 elif diagnostic == 'b':
                     required_fields.extend(['b'])
+                elif diagnostic == 'l2_kdv_1':
+                    required_fields.extend(['kdv_1'])
+                elif diagnostic == 'l2_kdv_2':
+                    required_fields.extend(['kdv_2'])
+                elif diagnostic == 'l2_kdv_3':
+                    required_fields.extend(['kdv_3'])
 
         for field in required_fields:
             if field not in self.fields.keys():
