@@ -24,7 +24,7 @@ for i, dt in enumerate(dts):
                c0=0.,
                gamma=0.,
                diagnostics=['mu'],
-               fields_to_output=['uscalar', 'du'],
+               fields_to_output=['du'],
                ndump=int(tmax / (1000 * dt)),
                field_ndump=int(tmax / (10 * dt)),
                allow_fail=True,
