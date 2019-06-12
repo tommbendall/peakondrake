@@ -75,7 +75,7 @@ class DiagnosticEquations(object):
                 mesh = u.function_space().mesh()
                 gamma = simulation_parameters['gamma'][-1]
                 u2_flux = self.diagnostic_variables.fields['u2_flux']
-                xis = self.prognostic_variables.pure_xis
+                xis = self.prognostic_variables.pure_xi_list
                 xis_x = []
                 xis_xxx = []
                 CG1 = FunctionSpace(mesh, "CG", 1)

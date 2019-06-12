@@ -23,9 +23,6 @@ class StochasticFunctions(object):
         self.num_Xis = simulation_parameters['num_Xis'][-1]
         self.Xi_family = simulation_parameters['Xi_family'][-1]
         self.Xi = prognostic_variables.Xi
-        self.pure_xis = prognostic_variables.pure_xis
-        for xi in range(self.num_Xis):
-            self.pure_xis.append(Function(self.Xi.function_space()))
         self.dWs = [Constant(0.0) for dw in range(self.num_Xis)]
         self.Xi_functions = []
         self.nXi_updates = simulation_parameters['nXi_updates'][-1]
@@ -52,6 +49,13 @@ class StochasticFunctions(object):
                 self.sigma = Constant(simulation_parameters['sigma'][-1] / self.num_Xis)
         else:
             self.sigma = Constant(0.0)
+
+        self.pure_xi_list = prognostic_variables.pure_xi_list
+        self.pure_xi_x_list = prognostic_variables.pure_xi_x_list
+        for xi in range(self.num_Xis):
+            self.pure_xi_list.append(Function(self.Xi.function_space()))
+            self.pure_xi_x_list.append(Function(self.Xi.function_space()))
+
 
         if self.Xi_family == 'sines':
             for n in range(self.num_Xis):
@@ -85,11 +89,9 @@ class StochasticFunctions(object):
         if self.scheme == 'hydrodynamic':
             self.Xi_x = prognostic_variables.Xi_x
             self.Xi_xx = prognostic_variables.Xi_xx
-            self.Xi_xxx = prognostic_variables.Xi_xxx
 
             self.Xi_x_functions = []
             self.Xi_xx_functions = []
-            self.Xi_xxx_functions = []
 
             for Xi_expr in self.Xi_functions:
                 Xi_x_function = Function(self.Xi_x.function_space())
@@ -116,12 +118,14 @@ class StochasticFunctions(object):
         # now make a master xi
         Xi_expr = 0.0*x
 
-        for dW, Xi_function, pure_xi in zip(self.dWs, self.Xi_functions, self.pure_xis):
+        for dW, Xi_function, pure_xi, pure_xi_x in zip(self.dWs, self.Xi_functions, self.pure_xi_list, self.pure_xi_x_list):
             Xi_expr += dW * Xi_function
             if self.scheme == 'upwind':
-                pure_xi.interpolate(as_vector([Xi_function]))
+                pure_xi.interpolate(as_vector([self.sigma*Xi_function]))
+                pure_xi_x.project(as_vector([self.sigma*Xi_function.dx(0)]))
             else:
-                pure_xi.interpolate(Xi_function)
+                pure_xi.interpolate(self.sigma*Xi_function)
+                pure_xi_x.project(self.sigma*Xi_function.dx(0))
 
         if self.scheme == 'upwind':
             self.Xi_interpolator = Interpolator(as_vector([Xi_expr]), self.Xi)
@@ -133,18 +137,14 @@ class StochasticFunctions(object):
             # initialise blank expressions
             Xi_x_expr = 0.0*x
             Xi_xx_expr = 0.0*x
-            Xi_xxx_expr = 0.0*x
 
             # make full expressions by adding all dW * Xi_xs
-            for dW, Xi_x_function, Xi_xx_function, Xi_xxx_function in zip(self.dWs, self.Xi_x_functions, self.Xi_xx_functions, self.Xi_xxx_functions):
+            for dW, Xi_x_function, Xi_xx_function in zip(self.dWs, self.Xi_x_functions, self.Xi_xx_functions):
                 Xi_x_expr += dW * Xi_x_function
                 Xi_xx_expr += dW * Xi_xx_function
-                Xi_xxx_expr += dW * Xi_xxx_function
 
             self.Xi_x_interpolator = Interpolator(Xi_x_expr, self.Xi_x)
             self.Xi_xx_interpolator = Interpolator(Xi_xx_expr, self.Xi_xx)
-            self.Xi_xxx_interpolator = Interpolator(Xi_xxx_expr, self.Xi_xxx)
-
 
 
     def update(self, t):

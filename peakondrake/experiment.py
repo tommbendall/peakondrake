@@ -14,7 +14,8 @@ def experiment(code, Ld, tmax, resolutions=[],
                ics=[], num_Xis=[], Xi_family=[],
                diagnostics=None, fields_to_output=None,
                ndump=-1, field_ndump=-1, nXi_updates=1, allow_fail=False,
-               t_kick=[], sigma_kick=0.0, smooth_t=None):
+               t_kick=[], sigma_kick=0.0, smooth_t=None,
+               peakon_equations=False):
 
     # set up dumping
     dirname = 'results/'+code
@@ -72,8 +73,8 @@ def experiment(code, Ld, tmax, resolutions=[],
             fixed_parameters[key] = value
             simulation_parameters[key] = (value[1][0],)
 
-    for key, value in zip(['dirname', 'Ld', 'tmax', 'ndump', 'field_ndump', 'nXi_updates', 'allow_fail', 'smooth_t'],
-                          [dirname, Ld, tmax, ndump, field_ndump, nXi_updates, allow_fail, smooth_t]):
+    for key, value in zip(['dirname', 'Ld', 'tmax', 'ndump', 'field_ndump', 'nXi_updates', 'allow_fail', 'smooth_t', 'peakon_equations'],
+                          [dirname, Ld, tmax, ndump, field_ndump, nXi_updates, allow_fail, smooth_t, peakon_equations]):
         simulation_parameters[key] = (value,)
 
     output_arguments = ('time',) + tuple(variable_parameters.keys())
@@ -119,6 +120,10 @@ def experiment(code, Ld, tmax, resolutions=[],
                     data_file.createVariable(output, float, output_arguments+('x',))
                 else:
                     data_file.createVariable(output, float, output_arguments)
+
+        if peakon_equations:
+            data_file.createVariable('p', float, output_arguments)
+            data_file.createVariable('q', float, output_arguments)
 
         # create diagnostics for wallclock time and failure time
         data_file.createDimension('wallclock_times', 2)
