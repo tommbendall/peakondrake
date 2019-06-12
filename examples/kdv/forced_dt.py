@@ -1,23 +1,27 @@
 from peakondrake import *
+from firedrake import sin, pi
 
-dts = [0.01, 0.005, 0.001]
+dts = [0.012, 0.006, 0.004, 0.003, 0.002]
 Ld = 40.
-tmax = 500
+tmax = 1200
+
+def sin_forcing(t):
+    return sin(2*pi*t/20)
 
 for i, dt in enumerate(dts):
-    code = 'skdv_dt_'+str(i)
-    dt = dts[i]
+
+    code = 'skdv_forced_dt_'+str(i)
 
     experiment(code, Ld, tmax,
                resolutions=200,
                dts=dt,
-               sigmas=[0.002, 0.02, 0.2],
-               seeds=range(20),
+               sigmas=[0.002*sqrt(dt), 0.02*sqrt(dt), 0.2*sqrt(dt)],
+               seeds=0,
                schemes='conforming',
                timesteppings='midpoint',
                ics='one_peak',
-               num_Xis=1,
-               Xi_family='gaussians',
+               num_Xis=3,
+               Xi_family='sines',
                alphasq=0.0,
                c0=0.,
                gamma=1.0,
@@ -25,4 +29,5 @@ for i, dt in enumerate(dts):
                fields_to_output=[],
                ndump=int(tmax / (1000 * dt)),
                field_ndump=int(tmax / (1 * dt)),
-               allow_fail=True)
+               allow_fail=True,
+               smooth_t=sin_forcing)

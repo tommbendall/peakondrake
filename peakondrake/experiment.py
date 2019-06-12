@@ -13,7 +13,7 @@ def experiment(code, Ld, tmax, resolutions=[],
                alphasq=[], c0=[], gamma=[],
                ics=[], num_Xis=[], Xi_family=[],
                diagnostics=None, fields_to_output=None,
-               ndump=-1, field_ndump=-1, nXi_update=1, allow_fail=False,
+               ndump=-1, field_ndump=-1, nXi_updates=1, allow_fail=False,
                t_kick=[], sigma_kick=0.0, smooth_t=None):
 
     # set up dumping
@@ -72,8 +72,8 @@ def experiment(code, Ld, tmax, resolutions=[],
             fixed_parameters[key] = value
             simulation_parameters[key] = (value[1][0],)
 
-    for key, value in zip(['dirname', 'Ld', 'tmax', 'ndump', 'field_ndump', 'nXi_update', 'allow_fail', 't_kick', 'sigma_kick', 'smooth_t'],
-                          [dirname, Ld, tmax, ndump, field_ndump, nXi_update, allow_fail, t_kick, sigma_kick, smooth_t]):
+    for key, value in zip(['dirname', 'Ld', 'tmax', 'ndump', 'field_ndump', 'nXi_updates', 'allow_fail', 'smooth_t'],
+                          [dirname, Ld, tmax, ndump, field_ndump, nXi_updates, allow_fail, smooth_t]):
         simulation_parameters[key] = (value,)
 
     output_arguments = ('time',) + tuple(variable_parameters.keys())

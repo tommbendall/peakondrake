@@ -1,13 +1,13 @@
 from peakondrake import *
 from firedrake import sin, pi
 
-dts = [0.012, 0.003]
+dts = [0.012]
 Ld = 40.
-tmax = 12000
+tmax = 1200
 
 for i, dt in enumerate(dts):
 
-    code = 'skdv_very_soft_long_dt_'+str(i)
+    code = 'skdv_very_soft_more_output_dt_'+str(i)
 
     experiment(code, Ld, tmax,
                resolutions=200,
@@ -25,6 +25,6 @@ for i, dt in enumerate(dts):
                diagnostics=['l2_u'],
                fields_to_output=[],
                ndump=int(tmax / (1000 * dt)),
-               field_ndump=int(tmax / (1 * dt)),
+               field_ndump=int(tmax / (1000 * dt)),
                allow_fail=True,
                nXi_update=(np.max(dts)/dt))

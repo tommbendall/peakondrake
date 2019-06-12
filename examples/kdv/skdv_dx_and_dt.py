@@ -1,15 +1,16 @@
 from peakondrake import *
 
-dts = [0.01, 0.005, 0.001]
+dxs = [200, 800, 2000]
+dts = [0.01, 0.0025, 0.001]
 Ld = 40.
 tmax = 500
 
-for i, dt in enumerate(dts):
-    code = 'skdv_dt_'+str(i)
-    dt = dts[i]
+
+for i, (dt, dx) in enumerate(zip(dts, dxs)):
+    code = 'skdv_dx_and_dt_'+str(i)
 
     experiment(code, Ld, tmax,
-               resolutions=200,
+               resolutions=dx,
                dts=dt,
                sigmas=[0.002, 0.02, 0.2],
                seeds=range(20),

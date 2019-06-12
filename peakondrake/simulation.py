@@ -39,7 +39,6 @@ def simulation(simulation_parameters,
     tmax = simulation_parameters['tmax'][-1]
     ndump = simulation_parameters['ndump'][-1]
     field_ndump = simulation_parameters['field_ndump'][-1]
-    nXi_update = simulation_parameters['nXi_update'][-1]
     file_name = simulation_parameters['file_name'][-1]
     scheme = simulation_parameters['scheme'][-1]
     allow_fail = simulation_parameters['allow_fail'][-1]
@@ -64,7 +63,6 @@ def simulation(simulation_parameters,
     dumpn = 0
     field_dumpn = 0
     # want the update to always happen on first time step (so results are consistent with earlier results)
-    Xi_update_n = nXi_update - 1 if nXi_update > 0 else 0
     t = 0
     failed = False
     failed_time = np.nan
@@ -74,10 +72,7 @@ def simulation(simulation_parameters,
         t += dt
 
         # update stochastic basis functions
-        Xi_update_n += 1
-        if Xi_update_n == nXi_update:
-            Xis.update(t)
-            Xi_update_n -= nXi_update
+        Xis.update(t)
 
         # solve problems
         if allow_fail:

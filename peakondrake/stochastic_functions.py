@@ -28,12 +28,18 @@ class StochasticFunctions(object):
             self.pure_xis.append(Function(self.Xi.function_space()))
         self.dWs = [Constant(0.0) for dw in range(self.num_Xis)]
         self.Xi_functions = []
-        self.sigma_kick = simulation_parameters['sigma_kick'][-1]
-        self.t_kick = simulation_parameters['t_kick'][-1]
+        self.nXi_updates = simulation_parameters['nXi_updates'][-1]
         self.smooth_t = simulation_parameters['smooth_t'][-1]
 
-        if self.smooth_t is not None and len(self.t_kick) > 0:
-            raise ValueError('smooth_t and t_kick are incompatible options')
+        if self.smooth_t is not None and self.nXi_updates > 1:
+            raise ValueError('Prescribing forcing and including multiple Xi updates are not compatible.')
+
+        if self.smooth_t is not None:
+            print('WARNING: Remember to change sigma to sigma * sqrt(dt) with the prescribed forcing option.')
+
+        if self.nXi_updates > 1:
+            print('WARNING: Remember to change sigma to sigma / sqrt(nXi_updates) with nXi_updates.')
+
 
         seed = simulation_parameters['seed'][-1]
         np.random.seed(seed)
@@ -148,10 +154,11 @@ class StochasticFunctions(object):
         if self.num_Xis > 0:
             if self.smooth_t is not None:
                 [dw.assign(self.sigma*self.smooth_t(t)) for dw in self.dWs]
-            elif len(self.t_kick) > 0 and np.min(self.t_kick) < t < np.max(self.t_kick):
-                [dw.assign(self.sigma_kick*np.random.randn()) for dw in self.dWs]
             else:
                 [dw.assign(self.sigma*np.random.randn()) for dw in self.dWs]
+                if self.nXi_updates > 1:
+                    for i in range(self.nXi_updates-1):
+                        [dw.assign(dw + self.sigma*np.random.randn()) for dw in self.dWs]
             self.Xi_interpolator.interpolate()
 
             if self.scheme == 'hydrodynamic':
