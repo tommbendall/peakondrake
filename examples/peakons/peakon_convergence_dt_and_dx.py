@@ -33,7 +33,6 @@ for i, dt, dx in enumerate(zip(dts, dxs)):
                ndump=int(tmax / (1000 * dt)),
                field_ndump=int(tmax / (10 * dt)),
                allow_fail=True,
-               nXi_update=1,
                peakon_equations=True)
 
 endtime = datetime.now()

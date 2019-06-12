@@ -11,7 +11,7 @@ starttime = datetime.now()
 dts = [0.0001, 0.005, 0.001, 0.002, 0.01]
 dxs = [10000, 2000, 1000, 500, 100]
 
-for i, dt, dx in enumerate(zip(dts, dxs)):
+for i, (dt, dx) in enumerate(zip(dts, dxs)):
 
     code = base_code+'_'+str(i)
 
