@@ -9,9 +9,9 @@ tmax = 50
 starttime = datetime.now()
 
 dts = [0.0005, 0.001, 0.002, 0.005]
-dx = [2000, 1000, 500, 200]
+dxs = [2000, 1000, 500, 200]
 
-for i, dt, dx in enumerate(zip(dts, dxs)):
+for i, (dt, dx) in enumerate(zip(dts, dxs)):
 
     code = base_code+'_'+str(i)
 
