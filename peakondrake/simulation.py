@@ -5,6 +5,7 @@ from peakondrake.equations import *
 from peakondrake.diagnostic_equations import *
 from peakondrake.stochastic_functions import *
 from peakondrake.outputting import *
+from peakondrake.peakon_equations import *
 import numpy as np
 
 def simulation(simulation_parameters,
@@ -54,9 +55,18 @@ def simulation(simulation_parameters,
     diagnostic_equations = DiagnosticEquations(diagnostic_variables, prognostic_variables, simulation_parameters)
     diagnostic_equations.solve()
 
+    # set up peakon equations
+    if simulation_parameters['peakon_equations'][-1] == True:
+        peakon_equations = PeakonEquations(prognostic_variables, simulation_parameters)
+    elif simulation_parameters['peakon_equations'][-1] == False:
+        peakon_equations = None
+    else:
+        raise ValueError('peakon_equations must be True or False, not %s' % simulation_parameters['peakon_equations'][-1])
+
     outputting = Outputting(prognostic_variables,
                             diagnostic_variables,
                             simulation_parameters,
+                            peakon_equations=peakon_equations,
                             diagnostic_values=diagnostic_values)
 
 
@@ -85,6 +95,8 @@ def simulation(simulation_parameters,
                     print("Solver failed at t = %f" % t)
         else:
             equations.solve()
+
+        peakon_equations.update()
 
         # output if necessary
         dumpn += 1
@@ -143,7 +155,6 @@ class PrognosticVariables(object):
             self.u = Function(self.Vu, name='u')
             self.Xi_x = Function(self.Vu, name='Xi_x')
             self.Xi_xx = Function(self.Vu, name='Xi_xx')
-            self.Xi_xxx = Function(self.Vu, name='Xi_xxx')
             self.fields['u'] = self.u
             self.fields['Xi_x'] = self.Xi_x
             self.fields['Xi_xx'] = self.Xi_xx
@@ -152,7 +163,8 @@ class PrognosticVariables(object):
 
         self.Xi = Function(self.Vu, name='Xi')
         self.fields['Xi'] = self.Xi
-        self.pure_xis = []
+        self.pure_xi_list = []
+        self.pure_xi_x_list = []
 
 class DiagnosticVariables(object):
     """

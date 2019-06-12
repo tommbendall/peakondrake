@@ -2,14 +2,14 @@ from peakondrake import *
 from netCDF4 import Dataset
 from datetime import datetime
 
-base_code = 'integrity_upwind_dx_with_dt'
+base_code = 'peakon_dt_with_dx'
 Ld = 40.
 tmax = 50
 
 starttime = datetime.now()
 
-dts = [0.0001, 0.005, 0.001, 0.002, 0.01]
-dxs = [10000, 2000, 1000, 500, 100]
+dts = [0.0005, 0.001, 0.002, 0.005]
+dx = [2000, 1000, 500, 200]
 
 for i, dt, dx in enumerate(zip(dts, dxs)):
 
@@ -18,9 +18,9 @@ for i, dt, dx in enumerate(zip(dts, dxs)):
     experiment(code, Ld, tmax,
                resolutions=dx,
                dts=dt,
-               sigmas=[0.0, 0.2],
-               seeds=0,
-               schemes='upwind',
+               sigmas=0.2,
+               seeds=range(20),
+               schemes='hydrodynamic',
                timesteppings='midpoint',
                ics='one_peak',
                num_Xis=3,
@@ -28,11 +28,13 @@ for i, dt, dx in enumerate(zip(dts, dxs)):
                alphasq=1.0,
                c0=0.,
                gamma=0.,
-               diagnostics=['mu'],
-               fields_to_output=['uscalar','du'],
+               diagnostics=['p_pde', 'q_pde'],
+               fields_to_output=[],
                ndump=int(tmax / (1000 * dt)),
                field_ndump=int(tmax / (10 * dt)),
-               allow_fail=True)
+               allow_fail=True,
+               nXi_update=1,
+               peakon_equations=True)
 
 endtime = datetime.now()
 print(base_code)

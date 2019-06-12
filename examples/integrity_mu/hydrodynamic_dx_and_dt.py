@@ -8,15 +8,15 @@ tmax = 50
 
 starttime = datetime.now()
 
-dts = [0.0001, 0.002, 0.001, 0.05, 0.01]
-dx = [10000, 2000, 1000, 500, 100]
+dts = [0.0001, 0.005, 0.001, 0.002, 0.01]
+dxs = [10000, 2000, 1000, 500, 100]
 
-for i, dt in enumerate(dts):
+for i, dt, dx in enumerate(zip(dts, dxs)):
 
     code = base_code+'_'+str(i)
 
     experiment(code, Ld, tmax,
-               resolutions=10000,
+               resolutions=dx,
                dts=dt,
                sigmas=[0.0, 0.2],
                seeds=0,

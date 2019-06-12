@@ -17,6 +17,7 @@ class Outputting(object):
     def __init__(self, prognostic_variables,
                  diagnostic_variables,
                  simulation_parameters,
+                 peakon_equations=None,
                  diagnostic_values=None):
 
         self.ndump = simulation_parameters['ndump'][-1]
@@ -24,6 +25,7 @@ class Outputting(object):
         self.prognostic_variables = prognostic_variables
         self.diagnostic_variables = diagnostic_variables
         self.simulation_parameters = simulation_parameters
+        self.peakon_equations = peakon_equations
         file_name = simulation_parameters['file_name'][-1]
         dirname = simulation_parameters['dirname'][-1]
         self.data_file = Dataset(file_name, 'a')
@@ -131,6 +133,10 @@ class Outputting(object):
                 output = norm(self.diagnostic_variables.fields['kdv_2'], norm_type='L2')
             elif diagnostic == 'l2_kdv_3':
                 output = norm(self.diagnostic_variables.fields['kdv_3'], norm_type='L2')
+            elif diagnostic == 'p_pde':
+                output = np.max(u.dat.data[:])
+            elif diagnostic == 'q_pde':
+                output = self.diagnostic_variables.coords.dat.data[np.argmax(u.dat.data[:])]
             else:
                 raise ValueError('Diagnostic %s not recgonised.' % diagnostic)
 
@@ -142,6 +148,10 @@ class Outputting(object):
                     self.data_file[diagnostic+'_'+str(i)][[slice(self.t_idx,self.t_idx+1)]+self.index_slices] = mu
             else:
                 self.data_file[diagnostic][[slice(self.t_idx,self.t_idx+1)]+self.index_slices] = output
+
+        if self.peakon_equations is not None:
+            self.data_file['p'][[slice(self.t_idx,self.t_idx+1)]+self.index_slices] = self.peakon_equations.p
+            self.data_file['q'][[slice(self.t_idx,self.t_idx+1)]+self.index_slices] = self.peakon_equations.q
 
         self.t_idx += 1
 
