@@ -1,7 +1,8 @@
-from firedrake import (dx, conditional, exp, as_vector, dot, pi,
+from firedrake import (dx, conditional, exp, as_vector, dot, pi, sqrt,
                        Function, NonlinearVariationalSolver,
                        TestFunction, NonlinearVariationalProblem,
-                       SpatialCoordinate, Constant, FunctionSpace, cosh)
+                       SpatialCoordinate, Constant, FunctionSpace, cosh,
+                       MixedFunctionSpace, TestFunctions, split)
 
 def build_initial_conditions(prognostic_variables, simulation_parameters):
 
@@ -19,6 +20,9 @@ def build_initial_conditions(prognostic_variables, simulation_parameters):
     c0 = simulation_parameters['c0'][-1]
     gamma = simulation_parameters['gamma'][-1]
     x, = SpatialCoordinate(mesh)
+    Ld = simulation_parameters['Ld'][-1]
+    deltax = Ld / simulation_parameters['resolution'][-1]
+    epsilon = 1
 
     ic_dict = {'two_peaks': (0.2*2/(exp(x-403./15.) + exp(-x+403./15.))
                              + 0.5*2/(exp(x-203./15.)+exp(-x+203./15.))),
@@ -28,7 +32,8 @@ def build_initial_conditions(prognostic_variables, simulation_parameters):
                'peakon': conditional(x < 20., exp((x-20.)/1.), exp(-(x-20.)/1.)),
                'one_peak': 0.5*2/(exp(x-203./15.)+exp(-x+203./15.)),
                'flat': Constant(2*pi**2/(9*40**2)),
-               'coshes': Constant(2000)*cosh((2000**0.5/2)*(x-0.75))**(-2)+Constant(1000)*cosh(1000**0.5/2*(x-0.25))**(-2)}
+               'coshes': Constant(2000)*cosh((2000**0.5/2)*(x-0.75))**(-2)+Constant(1000)*cosh(1000**0.5/2*(x-0.25))**(-2),
+               'd_peakon':exp(-sqrt((x-Ld/2)**2 + epsilon * deltax ** 2) / sqrt(alphasq))}
 
     ic_expr = ic_dict[ic]
 
@@ -53,9 +58,42 @@ def build_initial_conditions(prognostic_variables, simulation_parameters):
         prognostic_variables.m.interpolate(m_CG)
 
     elif prognostic_variables.scheme in ('conforming', 'hydrodynamic'):
-        VCG5 = FunctionSpace(mesh, "CG", 5)
-        smooth_condition = Function(VCG5).interpolate(ic_expr)
-        prognostic_variables.u.project(smooth_condition)
+        if ic == 'peakon':
+            Vu = prognostic_variables.Vu
+            # delta = Function(Vu)
+            # middle_index = int(len(delta.dat.data[:]) / 2)
+            # delta.dat.data[middle_index] = 1
+            # u0 = prognostic_variables.u
+            # phi = TestFunction(Vu)
+            #
+            # eqn = phi * u0 * dx + alphasq * phi.dx(0) * u0.dx(0) * dx - phi * delta * dx
+            # prob = NonlinearVariationalProblem(eqn, u0)
+            # solver = NonlinearVariationalSolver(prob)
+            # solver.solve()
+            # W = MixedFunctionSpace((Vu, Vu))
+            # psi, phi = TestFunctions(W)
+            # w = Function(W)
+            # u, F = w.split()
+            # u.interpolate(ic_expr)
+            # u, F = split(w)
+            #
+            # eqn = (psi * u * dx - psi * (0.5 * u * u + F) * dx
+            #        + phi * F * dx + alphasq * phi.dx(0) * F.dx(0) * dx
+            #        - phi * u * u * dx - 0.5 * alphasq * phi * u.dx(0) * u.dx(0) * dx)
+            #
+            # u, F = w.split()
+            #
+            # prob = NonlinearVariationalProblem(eqn, w)
+            # solver = NonlinearVariationalSolver(prob)
+            # solver.solve()
+            # prognostic_variables.u.assign(u)
+            prognostic_variables.u.project(ic_expr)
+            # prognostic_variables.u.interpolate(ic_expr)
+        else:
+            VCG5 = FunctionSpace(mesh, "CG", 5)
+            smooth_condition = Function(VCG5).interpolate(ic_expr)
+            prognostic_variables.u.project(smooth_condition)
+
 
     else:
         raise NotImplementedError('Other schemes not yet implemented.')

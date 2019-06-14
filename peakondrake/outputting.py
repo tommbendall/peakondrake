@@ -87,6 +87,8 @@ class Outputting(object):
         u = self.prognostic_variables.u
         if 'm' in self.prognostic_variables.fields.keys():
             m = self.prognostic_variables.m
+        elif 'm' in self.diagnostic_variables.fields.keys():
+            m = self.diagnostic_variables.fields['m']
 
         alphasq = self.simulation_parameters['alphasq'][-1]
 
@@ -107,6 +109,8 @@ class Outputting(object):
                 output = assemble(m * dx)
             elif diagnostic == 'mass_m2':
                 output = assemble(m * m * dx)
+            elif diagnostic == 'mass_u':
+                output = assemble(u * dx)
             elif diagnostic == 'min_u':
                 output = 1 if norm(u_min, norm_type='L2') > 1e-10 else 0
             elif diagnostic == 'max_jump_local':
@@ -137,6 +141,8 @@ class Outputting(object):
                 output = np.max(u.dat.data[:])
             elif diagnostic == 'q_pde':
                 output = self.diagnostic_variables.coords.dat.data[np.argmax(u.dat.data[:])]
+            elif diagnostic == 'm_max':
+                output = np.max(m.dat.data[:])
             else:
                 raise ValueError('Diagnostic %s not recgonised.' % diagnostic)
 

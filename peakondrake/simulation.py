@@ -213,6 +213,8 @@ class DiagnosticVariables(object):
                 V = FunctionSpace(self.mesh, "CG", 1)
             elif field == 'kdv_3':
                 V = FunctionSpace(self.mesh, "CG", 1)
+            elif field == 'm':
+                V = FunctionSpace(self.mesh, "CG", 1)
             else:
                 raise ValueError('Output field %s not recognised.' % field)
 
@@ -250,6 +252,12 @@ class DiagnosticVariables(object):
                     required_fields.extend(['kdv_2'])
                 elif diagnostic == 'l2_kdv_3':
                     required_fields.extend(['kdv_3'])
+                elif diagnostic == 'mass_m':
+                    if 'm' not in prognostic_variables.fields.keys():
+                        required_fields.extend(['m'])
+                elif diagnostic == 'm_max':
+                    if 'm' not in prognostic_variables.fields.keys():
+                        required_fields.extend(['m'])
 
         for field in required_fields:
             if field not in self.fields.keys():
