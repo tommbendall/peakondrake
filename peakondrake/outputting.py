@@ -143,6 +143,20 @@ class Outputting(object):
                 output = self.diagnostic_variables.coords.dat.data[np.argmax(u.dat.data[:])]
             elif diagnostic == 'm_max':
                 output = np.max(m.dat.data[:])
+            elif diagnostic == 'E_0':
+                # use the calculated du
+                du = self.diagnostic_variables.fields['du']
+                output = assemble(0.5*(u**2 + alphasq*du**2)*dx)
+            elif diagnostic == 'E_1':
+                # just straightforwardly use u
+                output = assemble(0.5*(u**2 + alphasq*u.dx(0)**2)*dx)
+            elif diagnostic == 'E_2':
+                # use m
+                output = assemble(0.5*u*m*dx)
+            elif diagnostic == 'E_3':
+                # solve for uxx
+                u_xx = self.diagnostic_variables.fields['u_xx']
+                output = assemble(0.5*u*(u + alphasq*u_xx)*dx)
             else:
                 raise ValueError('Diagnostic %s not recgonised.' % diagnostic)
 

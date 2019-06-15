@@ -197,6 +197,15 @@ class DiagnosticEquations(object):
                 solver = NonlinearVariationalSolver(prob)
                 self.solvers.append(solver)
 
+            elif key == 'u_xx':
+
+                u_xx = self.diagnostic_variables.fields['u_xx']
+                phi = TestFunction(Vu)
+                eqn = phi * u_xx * dx + phi.dx(0) * u_xx.dx(0) * dx
+                prob = NonlinearVariationalProblem(eqn, u_xx)
+                solver = NonlinearVariationalSolver(prob)
+                self.solvers.append(solver)
+
             else:
                 raise NotImplementedError('Diagnostic %s not yet implemented' % key)
 

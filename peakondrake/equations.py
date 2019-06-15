@@ -168,6 +168,21 @@ class Equations(object):
                                                                              'ksp_type': 'preonly',
                                                                              'pc_type': 'lu'})
 
+            elif self.scheme == 'test' and self.timestepping == 'midpoint':
+                self.u = prognostic_variables.u
+                Vu = prognostic_variables.Vu
+                psi = TestFunction(Vu)
+                self.u1 = Function(Vu)
+                uh = (self.u1 + self.u) / 2
+                dvh = Dt * uh + sqrt(Dt) * prognostic_variables.Xi
+
+                eqn = (psi * (self.u1 - self.u) * dx - psi * uh * dvh.dx(0) * dx)
+                prob = NonlinearVariationalProblem(eqn, self.u1)
+                self.usolver = NonlinearVariationalSolver(prob,
+                                                          solver_parameters={'mat_type': 'aij',
+                                                                             'ksp_type': 'preonly',
+                                                                             'pc_type': 'lu'})
+
             else:
                 raise ValueError('Scheme %s and timestepping %s either not compatible or not recognised.' % (self.scheme, self.timestepping))
 
@@ -254,6 +269,10 @@ class Equations(object):
                 self.m.assign(self.m1)
 
         elif self.scheme == 'hydrodynamic' and self.timestepping == 'midpoint':
+            self.usolver.solve()
+            self.u.assign(self.u1)
+
+        elif self.scheme == 'test' and self.timestepping == 'midpoint':
             self.usolver.solve()
             self.u.assign(self.u1)
 

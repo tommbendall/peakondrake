@@ -43,6 +43,9 @@ def simulation(simulation_parameters,
     file_name = simulation_parameters['file_name'][-1]
     scheme = simulation_parameters['scheme'][-1]
     allow_fail = simulation_parameters['allow_fail'][-1]
+    only_peakons = simulation_parameters['only_peakons'][-1]
+
+    allow_fail = True if only_peakons else allow_fail
 
 
     prognostic_variables = PrognosticVariables(scheme, mesh)
@@ -74,7 +77,7 @@ def simulation(simulation_parameters,
     field_dumpn = 0
     # want the update to always happen on first time step (so results are consistent with earlier results)
     t = 0
-    failed = False
+    failed = True if only_peakons else False
     failed_time = np.nan
 
     # run simulation
@@ -96,7 +99,8 @@ def simulation(simulation_parameters,
         else:
             equations.solve()
 
-        peakon_equations.update()
+        if peakon_equations is not None:
+            peakon_equations.update()
 
         # output if necessary
         dumpn += 1
@@ -158,6 +162,10 @@ class PrognosticVariables(object):
             self.fields['u'] = self.u
             self.fields['Xi_x'] = self.Xi_x
             self.fields['Xi_xx'] = self.Xi_xx
+        elif scheme == 'test':
+            self.Vu = FunctionSpace(mesh, "CG", 1)
+            self.u = Function(self.Vu, name='u')
+            self.fields['u'] = self.u
         else:
             raise ValueError('Scheme not recognised.')
 
@@ -215,6 +223,8 @@ class DiagnosticVariables(object):
                 V = FunctionSpace(self.mesh, "CG", 1)
             elif field == 'm':
                 V = FunctionSpace(self.mesh, "CG", 1)
+            elif field == 'u_xx':
+                V = FunctionSpace(self.mesh, "CG", 1)
             else:
                 raise ValueError('Output field %s not recognised.' % field)
 
@@ -258,6 +268,13 @@ class DiagnosticVariables(object):
                 elif diagnostic == 'm_max':
                     if 'm' not in prognostic_variables.fields.keys():
                         required_fields.extend(['m'])
+                elif diagnostic == 'E_0':
+                    required_fields.extend(['du'])
+                elif diagnostic == 'E_2':
+                    if 'm' not in prognostic_variables.fields.keys():
+                        required_fields.extend(['m'])
+                elif diagnostic == 'E_3':
+                    required_fields.extend(['u_xx'])
 
         for field in required_fields:
             if field not in self.fields.keys():

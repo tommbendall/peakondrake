@@ -57,7 +57,7 @@ def build_initial_conditions(prognostic_variables, simulation_parameters):
         msolver0.solve()
         prognostic_variables.m.interpolate(m_CG)
 
-    elif prognostic_variables.scheme in ('conforming', 'hydrodynamic'):
+    elif prognostic_variables.scheme in ('conforming', 'hydrodynamic', 'test'):
         if ic == 'peakon':
             Vu = prognostic_variables.Vu
             # delta = Function(Vu)
