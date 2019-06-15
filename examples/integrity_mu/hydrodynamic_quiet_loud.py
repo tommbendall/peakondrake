@@ -8,7 +8,7 @@ tmax = 20
 
 starttime = datetime.now()
 
-dts = [0.001, 0.004, 0.01]
+dts = [0.0005, 0.001, 0.002]
 
 for i, dt in enumerate(dts):
 
