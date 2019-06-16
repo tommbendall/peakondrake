@@ -44,9 +44,9 @@ class StochasticFunctions(object):
         # make sure sigma is a Constant
         if self.num_Xis != 0:
             if isinstance(simulation_parameters['sigma'][-1], Constant):
-                self.sigma = simulation_parameters['sigma'][-1] / self.num_Xis
+                self.sigma = simulation_parameters['sigma'][-1]
             else:
-                self.sigma = Constant(simulation_parameters['sigma'][-1] / self.num_Xis)
+                self.sigma = Constant(simulation_parameters['sigma'][-1])
         else:
             self.sigma = Constant(0.0)
 

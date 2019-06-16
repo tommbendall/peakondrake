@@ -114,7 +114,7 @@ def experiment(code, Ld, tmax, resolutions=[],
         if diagnostics is not None:
             for output in diagnostics:
                 if output == 'mu':
-                    for i in range(10):
+                    for i in range(4):
                         data_file.createVariable(output+'_'+str(i), float, output_arguments)
                 elif output in ('a', 'b'):
                     data_file.createVariable(output, float, output_arguments+('x',))

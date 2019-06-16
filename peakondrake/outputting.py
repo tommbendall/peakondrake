@@ -250,37 +250,39 @@ def find_mus(f, df, x):
     # now look for max and min of df, in slices defined by dividing points
     if len(approx_peak_locations) > 1:
         for i in range(len(approx_peak_locations)):
-            if dividing_indices[i] > dividing_indices[i-1]:
-                max_idx = np.argmax(df.dat.data[dividing_indices[i-1]:dividing_indices[i]]) + dividing_indices[i-1]
-                min_idx = np.argmin(df.dat.data[dividing_indices[i-1]:dividing_indices[i]]) + dividing_indices[i-1]
-            else:
-                # if dividing_indices[i] == 0 we can't simply slice
-                if dividing_indices[i] == 0:
-                    max_idx = np.argmax(df.dat.data[dividing_indices[i-1]:]) + dividing_indices[i-1]
-                    min_idx = np.argmin(df.dat.data[dividing_indices[i-1]:]) + dividing_indices[i-1]
-                # similarly with dividing_indices[i-1] == len(approx_peak_locations) - 1
-                elif dividing_indices[i-1] == len(approx_peak_locations) - 1:
-                    max_idx = np.argmax(df.dat.data[0:dividing_indices[i-1]]) + dividing_indices[i-1]
-                    min_idx = np.argmin(df.dat.data[0:dividing_indices[i-1]]) + dividing_indices[i-1]
-                # otherwise, our zone is at the start and end of the list, so we need to compare each patch of the list
+            # only do this if one of the 4 highest peaks
+            if len(approx_peak_locations) < 4 or peak_heights[i] > sorted_peak_heights[3]:
+                if dividing_indices[i] > dividing_indices[i-1]:
+                    max_idx = np.argmax(df.dat.data[dividing_indices[i-1]:dividing_indices[i]]) + dividing_indices[i-1]
+                    min_idx = np.argmin(df.dat.data[dividing_indices[i-1]:dividing_indices[i]]) + dividing_indices[i-1]
                 else:
-                    max_idx_lower = np.argmax(df.dat.data[0:dividing_indices[i]])
-                    max_idx_upper = np.argmax(df.dat.data[dividing_indices[i-1]:]) + dividing_indices[i-1]
-                    min_idx_lower = np.argmin(df.dat.data[0:dividing_indices[i]])
-                    min_idx_upper = np.argmin(df.dat.data[dividing_indices[i-1]:]) + dividing_indices[i-1]
-                    max_idx = max_idx_lower if df.dat.data[max_idx_lower] > df.dat.data[max_idx_upper] else max_idx_upper
-                    min_idx = min_idx_lower if df.dat.data[min_idx_lower] < df.dat.data[min_idx_upper] else min_idx_upper
-            xmax = x.dat.data[max_idx]
-            xmin = x.dat.data[min_idx]
+                    # if dividing_indices[i] == 0 we can't simply slice
+                    if dividing_indices[i] == 0:
+                        max_idx = np.argmax(df.dat.data[dividing_indices[i-1]:]) + dividing_indices[i-1]
+                        min_idx = np.argmin(df.dat.data[dividing_indices[i-1]:]) + dividing_indices[i-1]
+                    # similarly with dividing_indices[i-1] == len(approx_peak_locations) - 1
+                    elif dividing_indices[i-1] == len(approx_peak_locations) - 1:
+                        max_idx = np.argmax(df.dat.data[0:dividing_indices[i-1]]) + dividing_indices[i-1]
+                        min_idx = np.argmin(df.dat.data[0:dividing_indices[i-1]]) + dividing_indices[i-1]
+                    # otherwise, our zone is at the start and end of the list, so we need to compare each patch of the list
+                    else:
+                        max_idx_lower = np.argmax(df.dat.data[0:dividing_indices[i]])
+                        max_idx_upper = np.argmax(df.dat.data[dividing_indices[i-1]:]) + dividing_indices[i-1]
+                        min_idx_lower = np.argmin(df.dat.data[0:dividing_indices[i]])
+                        min_idx_upper = np.argmin(df.dat.data[dividing_indices[i-1]:]) + dividing_indices[i-1]
+                        max_idx = max_idx_lower if df.dat.data[max_idx_lower] > df.dat.data[max_idx_upper] else max_idx_upper
+                        min_idx = min_idx_lower if df.dat.data[min_idx_lower] < df.dat.data[min_idx_upper] else min_idx_upper
+                xmax = x.dat.data[max_idx]
+                xmin = x.dat.data[min_idx]
 
-            # only append if one of the 10 highest peaks
-            if len(approx_peak_locations) < 11 or peak_heights[i] > sorted_peak_heights[10]:
+
                 if abs(xmin - xmax) < L / 2:
                     list_of_mus.append(abs(xmin - xmax))
                 else:
                     list_of_mus.append(L - abs(xmin - xmax))
-                list_of_xmax.append(xmax)
-                list_of_xmin.append(xmin)
+                # these were just for sanity checks
+                # list_of_xmax.append(xmax)
+                # list_of_xmin.append(xmin)
     else:
         # just do straightforward thing if there is only one peak
         max_idx = np.argmax(df.dat.data[:])
@@ -291,8 +293,8 @@ def find_mus(f, df, x):
             list_of_mus.append(abs(xmin - xmax))
         else:
             list_of_mus.append(L - abs(xmin - xmax))
-        list_of_xmax.append(xmax)
-        list_of_xmin.append(xmin)
+        # list_of_xmax.append(xmax)
+        # list_of_xmin.append(xmin)
 
     # print(list_of_mus, list_of_xmax, approx_peak_locations, list_of_xmin)
 
