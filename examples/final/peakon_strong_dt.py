@@ -12,7 +12,7 @@ starttime = datetime.now()
 for i, dt in enumerate(dts):
     code = base_code+'_'+str(i)
     experiment(code, Ld, tmax,
-               resolutions=800,
+               resolutions=750,
                dts=dt,
                sigmas=0.02,
                seeds=range(0),
