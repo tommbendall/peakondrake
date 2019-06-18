@@ -55,8 +55,6 @@ def simulation(simulation_parameters,
     Xis = StochasticFunctions(prognostic_variables, simulation_parameters)
 
     equations = Equations(prognostic_variables, simulation_parameters)
-    diagnostic_equations = DiagnosticEquations(diagnostic_variables, prognostic_variables, simulation_parameters)
-    diagnostic_equations.solve()
 
     # set up peakon equations
     if simulation_parameters['peakon_equations'][-1] == True:
@@ -71,6 +69,10 @@ def simulation(simulation_parameters,
                             simulation_parameters,
                             peakon_equations=peakon_equations,
                             diagnostic_values=diagnostic_values)
+
+    diagnostic_equations = DiagnosticEquations(diagnostic_variables, prognostic_variables, outputting, simulation_parameters)
+    diagnostic_equations.solve()
+
 
 
     dumpn = 0
@@ -207,23 +209,7 @@ class DiagnosticVariables(object):
             elif field == 'jump_du':
                 required_fields.extend(['du'])
                 V = FunctionSpace(self.mesh, "CG", 1)
-            elif field == 'F':
-                V = FunctionSpace(self.mesh, "CG", 1)
-            elif field == 'u2_flux':
-                V = FunctionSpace(self.mesh, "CG", 1)
-            elif field == 'a':
-                V = FunctionSpace(self.mesh, "CG", 1)
-            elif field == 'b':
-                V = FunctionSpace(self.mesh, "CG", 1)
-            elif field == 'kdv_1':
-                V = FunctionSpace(self.mesh, "CG", 1)
-            elif field == 'kdv_2':
-                V = FunctionSpace(self.mesh, "CG", 1)
-            elif field == 'kdv_3':
-                V = FunctionSpace(self.mesh, "CG", 1)
-            elif field == 'm':
-                V = FunctionSpace(self.mesh, "CG", 1)
-            elif field == 'u_xx':
+            elif field in ['F', 'u2_flux', 'a', 'b', 'kdv_1', 'kdv_2', 'kdv_3', 'm', 'u_xx', 'u_sde', 'u_sde_weak']:
                 V = FunctionSpace(self.mesh, "CG", 1)
             else:
                 raise ValueError('Output field %s not recognised.' % field)
@@ -275,6 +261,10 @@ class DiagnosticVariables(object):
                         required_fields.extend(['m'])
                 elif diagnostic == 'E_3':
                     required_fields.extend(['u_xx'])
+                elif diagnostic == 'u_error_with_sde':
+                    required_fields.extend(['u_sde'])
+                elif diagnostic == 'u_error_weak':
+                    required_fields.extend(['u_sde', 'u_sde_weak'])
 
         for field in required_fields:
             if field not in self.fields.keys():

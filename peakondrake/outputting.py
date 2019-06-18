@@ -1,5 +1,5 @@
 from firedrake import (File, assemble, dx, dS, norm, dot,
-                       Function, op2)
+                       Function, op2, errornorm)
 from netCDF4 import Dataset
 import numpy as np
 from datetime import datetime
@@ -157,6 +157,12 @@ class Outputting(object):
                 # solve for uxx
                 u_xx = self.diagnostic_variables.fields['u_xx']
                 output = assemble(0.5*u*(u + alphasq*u_xx)*dx)
+            elif diagnostic == 'u_error_with_sde':
+                u_hat = self.diagnostic_variables.fields['u_sde']
+                output = errornorm(u, u_hat)
+            elif diagnostic == 'u_error_weak':
+                u_hat_weak = self.diagnostic_variables.fields['u_sde_weak']
+                output = norm(u_hat_weak)
             else:
                 raise ValueError('Diagnostic %s not recgonised.' % diagnostic)
 
