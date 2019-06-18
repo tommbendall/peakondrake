@@ -14,7 +14,7 @@ j = 0
 starttime = datetime.now()
 
 for i, dt in enumerate(dts):
-    code = base_code+str(i)
+    code = base_code+str(i)+'_'+str(j)
     experiment(code, Ld, tmax,
                resolutions=1500,
                dts=dt,
