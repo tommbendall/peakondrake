@@ -18,7 +18,7 @@ for seed in seeds:
 
     experiment(true_code, Ld, tmax,
                resolutions=10000,
-               dts=dt,
+               dts=dt_true,
                sigmas=0.02,
                seeds=0,
                schemes='hydrodynamic',
@@ -31,8 +31,8 @@ for seed in seeds:
                gamma=0.,
                diagnostics=['l2_u'],
                fields_to_output=[],
-               ndump=int(tmax / (100 * dt)),
-               field_ndump=int(tmax / (1 * dt)),
+               ndump=int(tmax / (100 * dt_true)),
+               field_ndump=int(tmax / (1 * dt_true)),
                allow_fail=True,
                peakon_equations=True,
                only_peakons=True)

@@ -5,7 +5,7 @@ from datetime import datetime
 Ld = 40.
 tmax = 80
 dt = 0.001
-i = 0
+i = 7
 code = 'final_mu_experiment_'+str(i)
 
 starttime = datetime.now()

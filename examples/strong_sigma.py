@@ -2,21 +2,24 @@ from peakondrake import *
 from netCDF4 import Dataset
 from datetime import datetime
 
-base_code = 'sigma_strong_dt_convergence'
+k = 2
+j = 6
+
+base_code = 'sigma_strong_dt_dx_'+str(k)+'_convergence_'
 Ld = 40.
 tmax = 80
 dts = [0.0005, 0.001]
+dxs = [750, 1000, 1500]
 
-sigmas = [0.04, 0.08, 0.12, 0.16, 0.2]
+sigmas = [0.04, 0.08, 0.12, 0.16, 0.2, 0.005, 0.01]
 
-j = 0
 
 starttime = datetime.now()
 
 for i, dt in enumerate(dts):
     code = base_code+str(i)+'_'+str(j)
     experiment(code, Ld, tmax,
-               resolutions=1500,
+               resolutions=dxs[k],
                dts=dt,
                sigmas=sigmas[j],
                seeds=0,

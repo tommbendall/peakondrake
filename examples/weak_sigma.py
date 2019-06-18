@@ -8,7 +8,7 @@ tmax = 80
 dts = [0.0005, 0.001]
 sigmas = [0.04, 0.08, 0.12, 0.16, 0.2]
 
-j = 0
+j = 4
 
 starttime = datetime.now()
 
