@@ -49,6 +49,19 @@ class DiagnosticEquations(object):
             if self.true_peakon_file['p'][:].shape != (int(tmax/(ndump*dt)),):
                 raise ValueError('True peakon data must have same shape as proposed data!')
 
+        # do peakon data checks here
+        true_mean_peakon_data = simulation_parameters['true_mean_peakon_data'][-1]
+        if true_mean_peakon_data is not None:
+            self.true_mean_peakon_file = Dataset('results/'+true_mean_peakon_data+'/data.nc', 'r')
+            # check length of file is correct
+            ndump = simulation_parameters['ndump'][-1]
+            tmax = simulation_parameters['tmax'][-1]
+            dt = simulation_parameters['dt'][-1]
+            if len(self.true_mean_peakon_file['time'][:]) != int(tmax/(ndump*dt)):
+                raise ValueError('If reading in true peakon data, the dump frequency must be the same as that used for the true peakon data.')
+            if self.true_mean_peakon_file['p'][:].shape != (int(tmax/(ndump*dt)),):
+                raise ValueError('True peakon data must have same shape as proposed data!')
+
         mesh = u.function_space().mesh()
         x, = SpatialCoordinate(mesh)
         alphasq = simulation_parameters['alphasq'][-1]
@@ -240,6 +253,27 @@ class DiagnosticEquations(object):
             elif key == 'u_sde_weak':
                 u_sde = self.diagnostic_variables.fields['u_sde']
                 u_sde_weak = self.diagnostic_variables.fields['u_sde_weak']
+                psi = TestFunction(Vu)
+
+                eqn = psi * u_sde_weak * dx - psi * (u - u_sde) * dx
+                prob = NonlinearVariationalProblem(eqn, u_sde_weak)
+                solver = NonlinearVariationalSolver(prob)
+                self.solvers.append(solver)
+
+            elif key == 'u_sde_mean':
+                self.to_update_constants = True
+                self.p = Constant(1.0)
+                self.q = Constant(Ld/2)
+
+                u_sde = self.diagnostic_variables.fields['u_sde_mean']
+                expr = conditional(x < self.q - Ld / 2, self.p * exp(-(x-self.q+Ld)/sqrt(alphasq)),
+                                   conditional(x < self.q + Ld / 2, self.p * exp(-sqrt((self.q-x)**2/alphasq)),
+                                               self.p * exp(-(self.q+Ld-x)/sqrt(alphasq))))
+                self.interpolators.append(Interpolator(expr, u_sde))
+
+            elif key == 'u_sde_weak_mean':
+                u_sde = self.diagnostic_variables.fields['u_sde_mean']
+                u_sde_weak = self.diagnostic_variables.fields['u_sde_weak_mean']
                 psi = TestFunction(Vu)
 
                 eqn = psi * u_sde_weak * dx - psi * (u - u_sde) * dx

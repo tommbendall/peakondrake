@@ -15,7 +15,7 @@ for i, dt in enumerate(dts):
     experiment(code, Ld, tmax,
                resolutions=2000,
                dts=dt,
-               sigmas=0.02,
+               sigmas=0.02/sqrt(int(dt/dt_true)),
                seeds=range(0),
                schemes='hydrodynamic',
                timesteppings='midpoint',

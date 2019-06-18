@@ -14,7 +14,7 @@ for i, dt in enumerate(dts):
     experiment(code, Ld, tmax,
                resolutions=1500,
                dts=dt,
-               sigmas=0.04,
+               sigmas=0.08/sqrt(int(dt/np.min(dts))),
                seeds=0,
                schemes='hydrodynamic',
                timesteppings='midpoint',

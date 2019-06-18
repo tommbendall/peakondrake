@@ -163,6 +163,12 @@ class Outputting(object):
             elif diagnostic == 'u_error_weak':
                 u_hat_weak = self.diagnostic_variables.fields['u_sde_weak']
                 output = norm(u_hat_weak)
+            elif diagnostic == 'u_error_with_sde_mean':
+                u_hat = self.diagnostic_variables.fields['u_sde_mean']
+                output = errornorm(u, u_hat)
+            elif diagnostic == 'u_error_weak_mean':
+                u_hat_weak = self.diagnostic_variables.fields['u_sde_weak_mean']
+                output = norm(u_hat_weak)
             else:
                 raise ValueError('Diagnostic %s not recgonised.' % diagnostic)
 

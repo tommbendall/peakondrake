@@ -209,7 +209,7 @@ class DiagnosticVariables(object):
             elif field == 'jump_du':
                 required_fields.extend(['du'])
                 V = FunctionSpace(self.mesh, "CG", 1)
-            elif field in ['F', 'u2_flux', 'a', 'b', 'kdv_1', 'kdv_2', 'kdv_3', 'm', 'u_xx', 'u_sde', 'u_sde_weak']:
+            elif field in ['F', 'u2_flux', 'a', 'b', 'kdv_1', 'kdv_2', 'kdv_3', 'm', 'u_xx', 'u_sde', 'u_sde_weak', 'u_sde_mean', 'u_sde_weak_mean']:
                 V = FunctionSpace(self.mesh, "CG", 1)
             else:
                 raise ValueError('Output field %s not recognised.' % field)
@@ -265,6 +265,10 @@ class DiagnosticVariables(object):
                     required_fields.extend(['u_sde'])
                 elif diagnostic == 'u_error_weak':
                     required_fields.extend(['u_sde', 'u_sde_weak'])
+                elif diagnostic == 'u_error_with_sde_mean':
+                    required_fields.extend(['u_sde_mean'])
+                elif diagnostic == 'u_error_weak_mean':
+                    required_fields.extend(['u_sde_mean', 'u_sde_weak_mean'])
 
         for field in required_fields:
             if field not in self.fields.keys():

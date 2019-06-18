@@ -16,7 +16,7 @@ def experiment(code, Ld, tmax, resolutions=[],
                ndump=-1, field_ndump=-1, nXi_updates=1, allow_fail=False,
                t_kick=[], sigma_kick=0.0, smooth_t=None,
                peakon_equations=False, only_peakons=False,
-               true_peakon_data=None):
+               true_peakon_data=None, true_mean_peakon_data=None):
 
     # set up dumping
     dirname = 'results/'+code
@@ -74,8 +74,8 @@ def experiment(code, Ld, tmax, resolutions=[],
             fixed_parameters[key] = value
             simulation_parameters[key] = (value[1][0],)
 
-    for key, value in zip(['dirname', 'Ld', 'tmax', 'ndump', 'field_ndump', 'nXi_updates', 'allow_fail', 'smooth_t', 'peakon_equations', 'only_peakons', 'true_peakon_data'],
-                          [dirname, Ld, tmax, ndump, field_ndump, nXi_updates, allow_fail, smooth_t, peakon_equations, only_peakons, true_peakon_data]):
+    for key, value in zip(['dirname', 'Ld', 'tmax', 'ndump', 'field_ndump', 'nXi_updates', 'allow_fail', 'smooth_t', 'peakon_equations', 'only_peakons', 'true_peakon_data', 'true_mean_peakon_data'],
+                          [dirname, Ld, tmax, ndump, field_ndump, nXi_updates, allow_fail, smooth_t, peakon_equations, only_peakons, true_peakon_data, true_mean_peakon_data]):
         simulation_parameters[key] = (value,)
 
     output_arguments = ('time',) + tuple(variable_parameters.keys())
