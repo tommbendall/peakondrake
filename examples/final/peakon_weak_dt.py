@@ -5,10 +5,10 @@ from os import path, makedirs
 
 Ld = 40.
 tmax = 10
-dt_true = 1e-2
-dts = [1e-1, 2e-1, 4e-1]
-seeds = range(5)
-nout = 25
+dt_true = 1e-5
+dts = [1e-4, 2e-4, 4e-4]
+seeds = range(20)
+nout = 100
 
 base_true_code = 'true_weak'
 base_pde_code = 'final_peakon_convergence_weak_dt'
