@@ -2,7 +2,7 @@ from peakondrake import *
 from netCDF4 import Dataset
 from datetime import datetime
 
-code = 'final_peakon_convergence_dx'
+code = 'final_peakon_convergence_dx_deterministic'
 Ld = 40.
 tmax = 10
 dt = 1e-5
@@ -12,7 +12,7 @@ starttime = datetime.now()
 experiment(code, Ld, tmax,
            resolutions=[500, 750, 1000, 1500, 2000],
            dts=dt,
-           sigmas=0.02/sqrt(10),
+           sigmas=0,
            seeds=0,
            schemes='hydrodynamic',
            timesteppings='midpoint',
@@ -28,7 +28,7 @@ experiment(code, Ld, tmax,
            field_ndump=int(tmax / (4 * dt)),
            allow_fail=True,
            peakon_equations=False,
-           true_peakon_data='true_peakon_data',
+           true_peakon_data='true_deterministic_peakon_data',
            nXi_updates=10)
 
 endtime = datetime.now()

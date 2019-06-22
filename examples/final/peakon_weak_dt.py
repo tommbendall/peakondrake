@@ -10,63 +10,70 @@ dts = [1e-4, 2e-4, 4e-4]
 seeds = range(20)
 nout = 100
 
+run_truth = True
+average_data = True
+
+speed_data = Dataset('results/peakon_speed/speed_data.nc', 'r')
+peakon_speed = speed_data['speed'][-1]
+
 base_true_code = 'true_weak'
 base_pde_code = 'final_peakon_convergence_weak_dt'
 
 starttime = datetime.now()
+if run_truth:
+    for seed in seeds:
+        true_code = base_true_code+'_'+str(seed)
 
-for seed in seeds:
-    true_code = base_true_code+'_'+str(seed)
+        experiment(true_code, Ld, tmax,
+                   resolutions=10000,
+                   dts=dt_true,
+                   sigmas=0.02,
+                   seeds=0,
+                   schemes='hydrodynamic',
+                   timesteppings='midpoint',
+                   ics='peakon',
+                   num_Xis=1,
+                   Xi_family='double_sines',
+                   alphasq=1.0,
+                   c0=0.,
+                   gamma=0.,
+                   diagnostics=['l2_u'],
+                   fields_to_output=[],
+                   ndump=int(tmax / (nout * dt_true)),
+                   field_ndump=int(tmax / (1 * dt_true)),
+                   allow_fail=True,
+                   peakon_equations=True,
+                   only_peakons=True,
+                   peakon_speed=peakon_speed)
 
-    experiment(true_code, Ld, tmax,
-               resolutions=10000,
-               dts=dt_true,
-               sigmas=0.02,
-               seeds=0,
-               schemes='hydrodynamic',
-               timesteppings='midpoint',
-               ics='peakon',
-               num_Xis=1,
-               Xi_family='double_sines',
-               alphasq=1.0,
-               c0=0.,
-               gamma=0.,
-               diagnostics=['l2_u'],
-               fields_to_output=[],
-               ndump=int(tmax / (nout * dt_true)),
-               field_ndump=int(tmax / (1 * dt_true)),
-               allow_fail=True,
-               peakon_equations=True,
-               only_peakons=True)
-
-
-nt = nout
 true_mean_code = 'true_weak_mean'
+if average_data:
+    nt = nout
 
-# set up dumping
-dirname = 'results/'+true_mean_code
-if path.exists(dirname):
-    raise IOError("results directory '%s' already exists" % dirname)
-else:
-    makedirs(dirname)
+    # set up dumping
+    dirname = 'results/'+true_mean_code
+    if path.exists(dirname):
+        raise IOError("results directory '%s' already exists" % dirname)
+    else:
+        makedirs(dirname)
 
-mean_data = Dataset('results/'+true_mean_code+'/data.nc', 'w')
-mean_data.createDimension('time', nt)
-mean_data.createVariable('time', float, ('time',))
-mean_data.createVariable('p', float, ('time',))
-mean_data.createVariable('q', float, ('time',))
+    mean_data = Dataset('results/'+true_mean_code+'/data.nc', 'w')
+    mean_data.createDimension('time', nt)
+    mean_data.createVariable('time', float, ('time',))
+    mean_data.createVariable('p', float, ('time',))
+    mean_data.createVariable('q', float, ('time',))
 
 
-mean_p = np.zeros(nout)
-mean_q = np.zeros(nout)
-for seed in seeds:
-    true_code = base_true_code+'_'+str(seed)
-    data = Dataset('results/'+true_code+'/data.nc', 'r')
-    mean_p += data['p'][:]
-    mean_q += data['q'][:]
-mean_p[:] = mean_p[:]/len(seeds)
-mean_q[:] = mean_q[:]/len(seeds)
-mean_data['time'][:] = data['time'][:]
+    mean_p = np.zeros(nout)
+    mean_q = np.zeros(nout)
+    for seed in seeds:
+        true_code = base_true_code+'_'+str(seed)
+        data = Dataset('results/'+true_code+'/data.nc', 'r')
+        mean_p += data['p'][:]
+        mean_q += data['q'][:]
+    mean_p[:] = mean_p[:]/len(seeds)
+    mean_q[:] = mean_q[:]/len(seeds)
+    mean_data['time'][:] = data['time'][:]
 
 
 for seed in seeds:
