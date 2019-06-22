@@ -12,7 +12,7 @@ starttime = datetime.now()
 experiment(code, Ld, tmax,
            resolutions=[500, 750, 1000, 1500, 2000],
            dts=dt,
-           sigmas=0.02,
+           sigmas=0.02/sqrt(10),
            seeds=0,
            schemes='hydrodynamic',
            timesteppings='midpoint',

@@ -16,7 +16,7 @@ for i, dt in enumerate(dts):
                resolutions=2000,
                dts=dt,
                sigmas=0.02/sqrt(int(dt/dt_true)),
-               seeds=range(0),
+               seeds=0,
                schemes='hydrodynamic',
                timesteppings='midpoint',
                ics='peakon',
@@ -31,7 +31,7 @@ for i, dt in enumerate(dts):
                field_ndump=int(tmax / (1 * dt)),
                allow_fail=True,
                peakon_equations=False,
-               true_peakon_data='true_peakon_data'
+               true_peakon_data='true_peakon_data',
                nXi_updates=int(dt/dt_true))
 
 endtime = datetime.now()
