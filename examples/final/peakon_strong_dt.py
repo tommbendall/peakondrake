@@ -5,8 +5,8 @@ from datetime import datetime
 base_code = 'final_peakon_convergence_strong_dt'
 Ld = 40.
 tmax = 10
-dt_true = 1e-6
-dts = [1e-5, 2e-5, 4e-5]
+dt_true = 1e-5
+dts = [0.1, 0.05, 0.02, 0.01, 0.005, 0.002, 0.001, 0.0005]
 
 
 starttime = datetime.now()
@@ -32,7 +32,7 @@ for i, dt in enumerate(dts):
                field_ndump=int(tmax / (1 * dt)),
                allow_fail=True,
                peakon_equations=False,
-               true_peakon_data='true_peakon_data'
+               true_peakon_data='true_peakon_data',
                nXi_updates=int(dt/dt_true))
 
 endtime = datetime.now()

@@ -1,13 +1,14 @@
 from peakondrake import *
 from netCDF4 import Dataset
 
-base_code = 'true_deterministic_peakon_data'
+base_code = 'true_old_deterministic_peakon_data'
 Ld = 40.
 tmax = 10
-dt = 1e-6
+dt = 1e-4
 
 speed_data = Dataset('results/peakon_speed/speed_data.nc', 'r')
 peakon_speed = speed_data['speed'][-1]
+peakon_speed = 1.0
 
 experiment(base_code, Ld, tmax,
            resolutions=10000,

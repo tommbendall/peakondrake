@@ -6,15 +6,12 @@ from os import path, makedirs
 Ld = 40.
 tmax = 10
 dt_true = 1e-5
-dts = [1e-4, 2e-4, 4e-4]
+dts = [0.1, 0.05, 0.02, 0.01, 0.005, 0.002, 0.001, 0.0005]
 seeds = range(20)
 nout = 100
 
 run_truth = True
 average_data = True
-
-speed_data = Dataset('results/peakon_speed/speed_data.nc', 'r')
-peakon_speed = speed_data['speed'][-1]
 
 base_true_code = 'true_weak'
 base_pde_code = 'final_peakon_convergence_weak_dt'
@@ -43,8 +40,7 @@ if run_truth:
                    field_ndump=int(tmax / (1 * dt_true)),
                    allow_fail=True,
                    peakon_equations=True,
-                   only_peakons=True,
-                   peakon_speed=peakon_speed)
+                   only_peakons=True)
 
 true_mean_code = 'true_weak_mean'
 if average_data:
