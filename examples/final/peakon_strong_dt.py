@@ -8,6 +8,9 @@ tmax = 10
 dt_true = 1e-6
 dts = [1e-5, 2e-5, 4e-5]
 
+speed_data = Dataset('results/peakon_speed/speed_data.nc', 'r')
+peakon_speed = speed_data['speed'][-1]
+
 starttime = datetime.now()
 
 for i, dt in enumerate(dts):
@@ -32,7 +35,8 @@ for i, dt in enumerate(dts):
                allow_fail=True,
                peakon_equations=False,
                true_peakon_data='true_peakon_data'
-               nXi_updates=int(dt/dt_true))
+               nXi_updates=int(dt/dt_true),
+               peakon_speed=peakon_speed)
 
 endtime = datetime.now()
 print(code)

@@ -2,7 +2,7 @@ from peakondrake import *
 from netCDF4 import Dataset
 from datetime import datetime
 
-base_code = 'final_mu_strong_dt_convergence_'
+base_code = 'final_mu_strong_dt_sigma_20_convergence_'
 Ld = 40.
 tmax = 80
 dts = [0.0005, 0.001]
@@ -14,7 +14,7 @@ for i, dt in enumerate(dts):
     experiment(code, Ld, tmax,
                resolutions=1500,
                dts=dt,
-               sigmas=0.08/sqrt(int(dt/np.min(dts))),
+               sigmas=0.2/sqrt(int(dt/np.min(dts))),
                seeds=0,
                schemes='hydrodynamic',
                timesteppings='midpoint',

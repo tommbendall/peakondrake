@@ -44,6 +44,7 @@ def simulation(simulation_parameters,
     scheme = simulation_parameters['scheme'][-1]
     allow_fail = simulation_parameters['allow_fail'][-1]
     only_peakons = simulation_parameters['only_peakons'][-1]
+    peakon_speed = simulation_parameters['peakon_speed'][-1]
 
     allow_fail = True if only_peakons else allow_fail
 
@@ -58,7 +59,7 @@ def simulation(simulation_parameters,
 
     # set up peakon equations
     if simulation_parameters['peakon_equations'][-1] == True:
-        peakon_equations = PeakonEquations(prognostic_variables, simulation_parameters)
+        peakon_equations = PeakonEquations(prognostic_variables, simulation_parameters, peakon_speed)
     elif simulation_parameters['peakon_equations'][-1] == False:
         peakon_equations = None
     else:

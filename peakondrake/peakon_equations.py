@@ -10,7 +10,7 @@ class PeakonEquations(object):
     :arg simulation_parameters: a dictionary storing the simulation parameters.
     """
 
-    def __init__(self, prognostic_variables, simulation_parameters):
+    def __init__(self, prognostic_variables, simulation_parameters, peakon_speed):
 
         self.Xi = prognostic_variables.Xi
         self.Xi_x = prognostic_variables.Xi_x
@@ -26,7 +26,7 @@ class PeakonEquations(object):
         p0 = np.max(self.u.dat.data[:])
         q0 = coords.dat.data[np.argmax(self.u.dat.data[:])]
 
-        self.p = p0
+        self.p = peakon_speed if peakon_speed is not None else p0
         self.q = q0
 
     def update(self):
