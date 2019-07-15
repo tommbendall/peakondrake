@@ -5,7 +5,7 @@ from datetime import datetime
 Ld = 40.
 tmax = 80
 dt = 0.001
-i = 7
+i = 9
 code = 'final_mu_experiment_'+str(i)
 
 starttime = datetime.now()
@@ -14,7 +14,7 @@ experiment(code, Ld, tmax,
            resolutions=[750, 1000, 1500],
            dts=dt,
            sigmas=0.08,
-           seeds=range(100),
+           seeds=range(i*100, (i+1)*100),
            schemes='hydrodynamic',
            timesteppings='midpoint',
            ics='one_peak',

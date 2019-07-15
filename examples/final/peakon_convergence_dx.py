@@ -12,7 +12,7 @@ starttime = datetime.now()
 experiment(code, Ld, tmax,
            resolutions=[500, 750, 1000, 1500, 2000],
            dts=dt,
-           sigmas=0.02/sqrt(10),
+           sigmas=0.02,
            seeds=0,
            schemes='hydrodynamic',
            timesteppings='midpoint',
@@ -29,7 +29,7 @@ experiment(code, Ld, tmax,
            allow_fail=True,
            peakon_equations=False,
            true_peakon_data='true_peakon_data',
-           nXi_updates=10)
+           nXi_updates=1)
 
 endtime = datetime.now()
 print(code)
