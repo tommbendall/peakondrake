@@ -148,6 +148,33 @@ class PrognosticVariables(object):
             self.u = Function(self.Vu, name='u')
             self.fields['u'] = self.u
             self.fields['m'] = self.m
+        elif scheme == 'LASCH':
+            self.Vm = FunctionSpace(mesh, "DG", 1)
+            self.Vu = VectorFunctionSpace(mesh, "CG", 1)
+            self.VL = FunctionSpace(mesh, "CG", 1)
+            self.m = Function(self.Vm, name='m')
+            self.u = Function(self.Vu, name='u')
+            self.Em = Function(self.Vm, name='Em')
+            self.Eu = Function(self.Vu, name='Eu')
+            self.fields['u'] = self.u
+            self.fields['Eu'] = self.Eu
+            self.fields['m'] = self.m
+            self.fields['Em'] = self.Em
+        elif scheme == 'LASCH_hydrodynamic':
+            self.Vm = FunctionSpace(mesh, "CG", 1)
+            self.Vu = FunctionSpace(mesh, "CG", 1)
+            self.m = Function(self.Vm, name='m')
+            self.u = Function(self.Vu, name='u')
+            self.Em = Function(self.Vm, name='Em')
+            self.Eu = Function(self.Vu, name='Eu')
+            self.fields['u'] = self.u
+            self.fields['Eu'] = self.Eu
+            self.fields['m'] = self.m
+            self.fields['Em'] = self.Em
+            self.Xi_x = Function(self.Vu, name='Xi_x')
+            self.Xi_xx = Function(self.Vu, name='Xi_xx')
+            self.fields['Xi_x'] = self.Xi_x
+            self.fields['Xi_xx'] = self.Xi_xx
         elif scheme == 'conforming':
             self.Vu = FunctionSpace(mesh, "CG", 1)
             self.u = Function(self.Vu, name='u')
@@ -176,6 +203,10 @@ class PrognosticVariables(object):
         self.fields['Xi'] = self.Xi
         self.pure_xi_list = []
         self.pure_xi_x_list = []
+        self.pure_xi_xx_list = []
+        self.pure_xi_xxx_list = []
+        self.pure_xi_xxxx_list = []
+
 
 class DiagnosticVariables(object):
     """
@@ -198,7 +229,14 @@ class DiagnosticVariables(object):
 
         for field in fields_to_output:
             if field in ['uscalar', 'Xiscalar']:
-                if self.scheme == 'upwind':
+                if self.scheme in ['upwind', 'LASCH']:
+                    V = FunctionSpace(self.mesh, "CG", 1)
+                else:
+                    raise ValueError('Output field %s only usable with upwind scheme, not %s' % (field, self.scheme))
+            elif field in ['pure_xi', 'pure_xi_x', 'pure_xi_xx', 'pure_xi_xxx', 'pure_xi_xxxx']:
+                    V = FunctionSpace(self.mesh, "CG", 1)
+            elif field == 'Euscalar':
+                if self.scheme == 'LASCH':
                     V = FunctionSpace(self.mesh, "CG", 1)
                 else:
                     raise ValueError('Output field %s only usable with upwind scheme, not %s' % (field, self.scheme))

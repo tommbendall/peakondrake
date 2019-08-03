@@ -52,9 +52,15 @@ class StochasticFunctions(object):
 
         self.pure_xi_list = prognostic_variables.pure_xi_list
         self.pure_xi_x_list = prognostic_variables.pure_xi_x_list
+        self.pure_xi_xx_list = prognostic_variables.pure_xi_xx_list
+        self.pure_xi_xxx_list = prognostic_variables.pure_xi_xxx_list
+        self.pure_xi_xxxx_list = prognostic_variables.pure_xi_xxxx_list
         for xi in range(self.num_Xis):
             self.pure_xi_list.append(Function(self.Xi.function_space()))
             self.pure_xi_x_list.append(Function(self.Xi.function_space()))
+            self.pure_xi_xx_list.append(Function(self.Xi.function_space()))
+            self.pure_xi_xxx_list.append(Function(self.Xi.function_space()))
+            self.pure_xi_xxxx_list.append(Function(self.Xi.function_space()))
 
 
         if self.Xi_family == 'sines':
@@ -93,7 +99,7 @@ class StochasticFunctions(object):
             raise NotImplementedError('Xi_family %s not implemented' % self.Xi_family)
 
         # make lists of functions for xi_x, xi_xx and xi_xxx
-        if self.scheme == 'hydrodynamic':
+        if self.scheme in ['hydrodynamic', 'LASCH_hydrodynamic']:
             self.Xi_x = prognostic_variables.Xi_x
             self.Xi_xx = prognostic_variables.Xi_xx
 
@@ -125,21 +131,34 @@ class StochasticFunctions(object):
         # now make a master xi
         Xi_expr = 0.0*x
 
-        for dW, Xi_function, pure_xi, pure_xi_x in zip(self.dWs, self.Xi_functions, self.pure_xi_list, self.pure_xi_x_list):
+        for dW, Xi_function, pure_xi, pure_xi_x, pure_xi_xx, pure_xi_xxx, pure_xi_xxxx in zip(self.dWs, self.Xi_functions, self.pure_xi_list, self.pure_xi_x_list, self.pure_xi_xx_list, self.pure_xi_xxx_list, self.pure_xi_xxxx_list):
             Xi_expr += dW * Xi_function
-            if self.scheme == 'upwind':
+            if self.scheme in ['upwind', 'LASCH']:
                 pure_xi.interpolate(as_vector([self.sigma*Xi_function]))
                 pure_xi_x.project(as_vector([self.sigma*Xi_function.dx(0)]))
+
+                CG1 = FunctionSpace(mesh, "CG", 1)
+                psi =  TestFunction(CG1)
+                xixx_scalar = Function(CG1)
+                xixx_eqn = psi * xixx_scalar * dx + psi.dx(0) * Xi_function.dx(0) * dx
+                prob = NonlinearVariationalProblem(xixx_eqn, xixx_scalar)
+                solver = NonlinearVariationalSolver(prob)
+                solver.solve()
+                pure_xi_xx.interpolate(as_vector([self.sigma*xixx_scalar]))
+
             else:
                 pure_xi.interpolate(self.sigma*Xi_function)
                 pure_xi_x.project(self.sigma*Xi_function.dx(0))
+                pure_xi_xx.project(pure_xi_x.dx(0))
+                pure_xi_xxx.project(pure_xi_xx.dx(0))
+                pure_xi_xxxx.project(pure_xi_xxx.dx(0))
 
-        if self.scheme == 'upwind':
+        if self.scheme in ['upwind', 'LASCH']:
             self.Xi_interpolator = Interpolator(as_vector([Xi_expr]), self.Xi)
         else:
             self.Xi_interpolator = Interpolator(Xi_expr, self.Xi)
 
-        if self.scheme == 'hydrodynamic':
+        if self.scheme in ['hydrodynamic', 'LASCH_hydrodynamic']:
 
             # initialise blank expressions
             Xi_x_expr = 0.0*x
@@ -168,7 +187,7 @@ class StochasticFunctions(object):
                         [dw.assign(dw + self.sigma*np.random.randn()) for dw in self.dWs]
             self.Xi_interpolator.interpolate()
 
-            if self.scheme == 'hydrodynamic':
+            if self.scheme in ['hydrodynamic', 'LASCH_hydrodynamic']:
                 self.Xi_x_interpolator.interpolate()
                 self.Xi_xx_interpolator.interpolate()
         else:

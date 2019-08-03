@@ -60,6 +60,259 @@ class Equations(object):
                 self.usolver = NonlinearVariationalSolver(uprob, solver_parameters={'ksp_type':'preonly',
                                                                                     'pc_type':'lu'})
 
+            elif self.scheme == 'LASCH' and self.timestepping == 'ssprk3':
+                Vm = prognostic_variables.Vm
+                Vu = prognostic_variables.Vu
+                VL = prognostic_variables.VL
+                self.u = prognostic_variables.u
+                self.m = prognostic_variables.m
+                self.Em = prognostic_variables.Em
+                self.Eu = prognostic_variables.Eu
+                self.Xi = prognostic_variables.Xi
+                self.m0 = Function(Vm).assign(self.m)
+                self.Em0 = Function(Vm).assign(self.Em)
+                pure_xis = prognostic_variables.pure_xi_list
+                pure_xixs = prognostic_variables.pure_xi_x_list
+                pure_xixxs = prognostic_variables.pure_xi_xx_list
+
+                Lxis = []
+                L2xis = []
+                self.Lxisolvers = []
+                self.L2xisolvers = []
+                for xi in pure_xis:
+                    Lxis.append(Function(VL))
+                    L2xis.append(Function(VL))
+
+                # now make problem for the actual problem
+                psi = TestFunction(Vm)
+                self.m_trial = Function(Vm)
+                self.dm = Function(Vm)  # introduce this as the advection operator for a single step
+                self.Em_trial = Function(Vm)
+                self.dEm = Function(Vm)
+
+                us = Dt * self.Eu + sqrt(Dt) * self.Xi
+
+                nhat = FacetNormal(mesh)
+                usn = 0.5*(dot(us, nhat) + abs(dot(us, nhat)))
+                ones = Function(Vu).project(as_vector([Constant(1.)]))
+
+                Lm = (psi * self.dm * dx
+                      - psi.dx(0) * self.m_trial * dot(ones, us) * dx
+                      + psi* self.m_trial * dot(ones, us.dx(0)) * dx
+                      + jump(psi) * (usn('+')*self.m_trial('+') - usn('-')*self.m_trial('-')) * dS)
+                mprob = NonlinearVariationalProblem(Lm, self.dm)
+                self.msolver = NonlinearVariationalSolver(mprob, solver_parameters={'ksp_type':'preonly',
+                                                                                    'pc_type':'bjacobi',
+                                                                                    'sub_pc_type':'ilu'})
+                Eun = 0.5*(dot(self.Eu, nhat) + abs(dot(self.Eu, nhat)))
+                nu = TestFunction(Vm)
+                Emeqn = (nu * self.dEm * dx
+                         - Dt * nu.dx(0) * self.Em_trial * dot(ones, self.Eu) * dx
+                         + Dt * nu * self.Em_trial * dot(ones, self.Eu.dx(0)) * dx
+                         + Dt * jump(nu) * (Eun('+')*self.Em_trial('+') - Eun('-')*self.Em_trial('-')) * dS)
+                for xi, xix, xixx, Lxi, L2xi in zip(pure_xis, pure_xixs, pure_xixxs, Lxis, L2xis):
+                    # xin = 0.5*(dot(dot(ones, xi)*xi, nhat) + abs(dot(dot(ones, xi)*xi, nhat)))
+                    # xixn = 0.5*(dot(dot(ones, xi)*xix, nhat) + abs(dot(dot(ones, xi)*xix, nhat)))
+                    # Emeqn -= 0.5 * Dt * (nu * self.Em_trial * (2 * dot(ones, xi) * dot(ones, xixx) + 4 * dot(ones, xix) * dot(ones, xix)) * dx
+                    #                      - 5 * (nu.dx(0) * self.Em_trial * dot(ones, xix) * dot(ones, xi) * dx
+                    #                             + nu * self.Em_trial * dot(ones, xix.dx(0)) * dot(ones, xi) * dx
+                    #                             + nu * self.Em_trial * dot(ones, xix) * dot(ones, xi.dx(0)) * dx
+                    #                             - jump(nu) * (xixn('+')*self.Em_trial('+') - xixn('-')*self.Em_trial('-')) * dS)
+                    #                      - (nu.dx(0) * self.Em_trial.dx(0) * dot(ones, xi) * dot(ones, xi) * dx
+                    #                         + 2 * nu * self.Em_trial.dx(0) * dot(ones, xi) * dot(ones, xix) * dx
+                    #                         - jump(nu) * (xin('+')*self.Em_trial.dx(0)('+') - xin('-')*self.Em_trial.dx(0)('-')) * dS))
+                    # L
+                    # solve for Lk
+                    chi = TestFunction(VL)
+                    Leqn = (chi * Lxi * dx
+                            + chi * self.Em_trial * dot(ones, xi) * dx
+                            - chi * self.Em_trial * dot(ones, xi.dx(0)) * dx)
+                    Lprob = NonlinearVariationalProblem(Leqn, Lxi)
+                    Lsolver = NonlinearVariationalSolver(Lprob)
+                    self.Lxisolvers.append(Lsolver)
+                    # then solve for LLk
+                    iota = TestFunction(VL)
+                    L2eqn = (iota * L2xi * dx
+                             + iota * Lxi * dot(ones, xi) * dx
+                             - iota * Lxi * dot(ones, xi.dx(0)) * dx)
+                    L2prob = NonlinearVariationalProblem(L2eqn, L2xi)
+                    L2solver = NonlinearVariationalSolver(L2prob)
+                    self.L2xisolvers.append(L2solver)
+
+                    Emeqn -= 0.5 * Dt * nu * L2xi * dx
+                Emprob = NonlinearVariationalProblem(Emeqn, self.dEm)
+                self.Emsolver = NonlinearVariationalSolver(Emprob, solver_parameters={'ksp_type':'preonly',
+                                                                                   'pc_type':'bjacobi',
+                                                                                   'sub_pc_type':'ilu'})
+
+                phi = TestFunction(Vu)
+                Eueqn = (dot(phi, ones) * self.Em * dx - dot(phi, self.Eu) * dx - alphasq * dot(self.Eu.dx(0), phi.dx(0)) * dx)
+                Euprob = NonlinearVariationalProblem(Eueqn, self.Eu)
+                self.Eusolver = NonlinearVariationalSolver(Euprob, solver_parameters={'ksp_type':'preonly',
+                                                                                    'pc_type':'lu'})
+
+                zeta = TestFunction(Vu)
+                ueqn = (dot(zeta, ones) * self.m * dx - dot(zeta, self.u) * dx - alphasq * dot(self.u.dx(0), zeta.dx(0)) * dx)
+                uprob = NonlinearVariationalProblem(ueqn, self.u)
+                self.usolver = NonlinearVariationalSolver(uprob, solver_parameters={'ksp_type':'preonly',
+                                                                                    'pc_type':'lu'})
+
+            elif self.scheme == 'LASCH' and self.timestepping == 'midpoint':
+                Vm = prognostic_variables.Vm
+                Vu = prognostic_variables.Vu
+                self.u = prognostic_variables.u
+                self.m = prognostic_variables.m
+                self.Em = prognostic_variables.Em
+                self.Eu = prognostic_variables.Eu
+                self.Xi = prognostic_variables.Xi
+                self.m0 = Function(Vm).assign(self.m)
+                self.Em0 = Function(Vm).assign(self.Em)
+                pure_xis = prognostic_variables.pure_xi_list
+                pure_xixs = prognostic_variables.pure_xi_x_list
+                pure_xixxs = prognostic_variables.pure_xi_xx_list
+
+                # now make problem for the actual problem
+                psi = TestFunction(Vm)
+                self.m_trial = Function(Vm)
+                self.mh = 0.5*(self.m_trial + self.m0)
+                self.Em_trial = Function(Vm)
+                self.Emh = 0.5*(self.Em_trial + self.Em0)
+
+                us = Dt * self.Eu + sqrt(Dt) * self.Xi
+
+                nhat = FacetNormal(mesh)
+                usn = 0.5*(dot(us, nhat) + abs(dot(us, nhat)))
+                ones = Function(Vu).project(as_vector([Constant(1.)]))
+
+                Lm = (psi * self.m_trial * dx - psi * self.Em0 * dx
+                      - psi.dx(0) * self.mh * dot(ones, us) * dx
+                      + psi* self.mh * dot(ones, us.dx(0)) * dx
+                      + jump(psi) * (usn('+')*self.mh('+') - usn('-')*self.mh('-')) * dS)
+                mprob = NonlinearVariationalProblem(Lm, self.m_trial)
+                self.msolver = NonlinearVariationalSolver(mprob, solver_parameters={'ksp_type':'preonly',
+                                                                                    'pc_type':'bjacobi',
+                                                                                    'sub_pc_type':'ilu'})
+                Eun = 0.5*(dot(self.Eu, nhat) + abs(dot(self.Eu, nhat)))
+                nu = TestFunction(Vm)
+                Emeqn = (nu * self.Em_trial * dx - nu * self.Em0 * dx
+                         - Dt * nu.dx(0) * self.Emh * dot(ones, self.Eu) * dx
+                         + Dt * nu* self.Emh * dot(ones, self.Eu.dx(0)) * dx
+                         + Dt * jump(nu) * (Eun('+')*self.Emh('+') - Eun('-')*self.Emh('-')) * dS)
+                for xi, xix, xixx in zip(pure_xis, pure_xixs, pure_xixxs):
+                    xin = 0.5*(dot(dot(ones, xi)*xi, nhat) + abs(dot(dot(ones, xi)*xi, nhat)))
+                    xixn = 0.5*(dot(dot(ones, xi)*xix, nhat) + abs(dot(dot(ones, xi)*xix, nhat)))
+                    Emeqn -= 0.5 * Dt * (nu * self.Emh * (2 * dot(ones, xi) * dot(ones, xixx) + 4 * dot(ones, xix) * dot(ones, xix)) * dx
+                                         - 5 * (nu.dx(0) * self.Emh * dot(ones, xix) * dot(ones, xi) * dx
+                                                + nu * self.Emh * dot(ones, xixx) * dot(ones, xi) * dx
+                                                + nu * self.Emh * dot(ones, xix) * dot(ones, xix) * dx
+                                                - jump(nu) * (xixn('+')*self.Emh('+') - xixn('-')*self.Emh('-')) * dS)
+                                         - (nu.dx(0) * self.Emh.dx(0) * dot(ones, xi) * dot(ones, xi) * dx
+                                            + 2 * nu * self.Emh.dx(0) * dot(ones, xi) * dot(ones, xix) * dx
+                                            - jump(nu) * (xin('+')*self.Emh.dx(0)('+') - xin('-')*self.Emh.dx(0)('-')) * dS))
+
+                Emprob = NonlinearVariationalProblem(Emeqn, self.Em_trial)
+                self.Emsolver = NonlinearVariationalSolver(Emprob, solver_parameters={'ksp_type':'preonly',
+                                                                                   'pc_type':'bjacobi',
+                                                                                   'sub_pc_type':'ilu'})
+
+                phi = TestFunction(Vu)
+                Eueqn = (dot(phi, ones) * self.Em * dx - dot(phi, self.Eu) * dx - alphasq * dot(self.Eu.dx(0), phi.dx(0)) * dx)
+                Euprob = NonlinearVariationalProblem(Eueqn, self.Eu)
+                self.Eusolver = NonlinearVariationalSolver(Euprob, solver_parameters={'ksp_type':'preonly',
+                                                                                    'pc_type':'lu'})
+
+                zeta = TestFunction(Vu)
+                ueqn = (dot(zeta, ones) * self.m * dx - dot(zeta, self.u) * dx - alphasq * dot(self.u.dx(0), zeta.dx(0)) * dx)
+                uprob = NonlinearVariationalProblem(ueqn, self.u)
+                self.usolver = NonlinearVariationalSolver(uprob, solver_parameters={'ksp_type':'preonly',
+                                                                                    'pc_type':'lu'})
+
+            elif self.scheme == 'LASCH_hydrodynamic' and self.timestepping == 'midpoint':
+                Vu = prognostic_variables.Vu
+                Vm = prognostic_variables.Vm
+                self.u = prognostic_variables.u
+                self.m = prognostic_variables.m
+                self.Em = prognostic_variables.Em
+                self.Eu = prognostic_variables.Eu
+                self.Xi = prognostic_variables.Xi
+                self.m0 = Function(Vm).assign(self.m)
+                self.Em0 = Function(Vm).assign(self.Em)
+                pure_xis = prognostic_variables.pure_xi_list
+                pure_xixs = prognostic_variables.pure_xi_x_list
+                pure_xixxs = prognostic_variables.pure_xi_xx_list
+                pure_xixxxs = prognostic_variables.pure_xi_xxx_list
+                pure_xixxxxs = prognostic_variables.pure_xi_xxxx_list
+
+                self.u = prognostic_variables.u
+                self.Eu = prognostic_variables.Eu
+
+                W = MixedFunctionSpace((Vu,)*3)
+                psi, phi, zeta = TestFunctions(W)
+
+                w1 = Function(W)
+                self.u1, dFh, dG = split(w1)
+
+                uh  = (self.u1 + self.u) / 2
+                dXi = sqrt(Dt) * prognostic_variables.Xi
+                dXi_x = sqrt(Dt) * prognostic_variables.Xi_x
+                dXi_xx = sqrt(Dt) * prognostic_variables.Xi_xx
+                dv = Dt * self.Eu + dXi
+
+                ueqn = (psi * (self.u1 - self.u) * dx
+                      + psi * uh.dx(0) * dv * dx
+                      + psi * dFh * dx
+                      + phi * dFh * dx + alphasq * phi.dx(0) * dFh.dx(0) * dx
+                      - phi * 2 * uh * dv.dx(0) * dx - alphasq * phi * uh.dx(0) * dG.dx(0) * dx
+                      + zeta * dG * dx + zeta.dx(0) * dv * dx)  # note there are lots of different ways we could do this
+
+                # could have dG as double derivative if we want
+                # or could solve just for Eu_xx
+                # or could solve for Em
+
+                self.u1, Fh, Gh = w1.split()
+
+
+                Epsi, Ephi, Ezeta = TestFunctions(W)
+                Ew1 = Function(W)
+                self.Eu1, EFh, EGh = split(Ew1)
+
+                Euh = (self.Eu1 + self.Eu) / 2
+
+                Eueqn = (Epsi * (self.Eu1 - self.Eu) * dx
+                         + Dt * Epsi * Euh * Euh.dx(0) * dx
+                         - Dt * Epsi.dx(0) * EFh * dx
+                         - Dt * Epsi * EGh * dx
+                         + Ephi * EFh * dx + alphasq * Ephi.dx(0) * EFh.dx(0) * dx
+                         - Ephi * 0.5 * alphasq * Euh.dx(0) * Euh.dx(0) * dx - Ephi * Euh * Euh * dx
+                         + Ezeta * EGh * dx + alphasq * Ezeta.dx(0) * EGh.dx(0) * dx)
+
+                for xi, xix, xixx, xixxx, xixxxx in zip(pure_xis, pure_xixs, pure_xixxs, pure_xixxxs, pure_xixxxxs):
+                    Eueqn += (0.5 * Dt * Epsi.dx(0) * Euh.dx(0) * xi * xi * dx + Dt * Epsi.dx(0) * Euh * xi * xix * dx
+                              + 1.5 * Dt * Epsi * Euh.dx(0) * xi * xix * dx + 0.5 * Dt * Epsi * Euh * (3 * xixx * xi + 2 * xix * xix) * dx
+                              - 0.5 * Ezeta * Euh * (4 * xix * xix + 4 * xi * xixx - alphasq * xi * xixxxx - 2 * alphasq * xix * xixxx - alphasq * xixx * xixx) * dx
+                              - 0.5 * Ezeta * Euh.dx(0) * (3 * xi * xix - alphasq * xixxx * xi + alphasq * xixx * xix) * dx)
+
+                # for xi_xi, xi_xix, xi_xixx, xi_xixxx, xi_xixxxx, xix_xix, xix_xixx, xix_xixxx, xixx_xixx in zip(pure_xi_xis, pure_xi_xixs, pure_xi_xixxs, pure_xi_xixxxs, pure_xi_xixxxxs, pure_xix_xixs, pure_xix_xixxs, pure_xix_xixxxs, pure_xixx_xixxs):
+                #     Eueqn -= (0.5 * Dt * Epsi.dx(0) * Euh.dx(0) * xi_xi * dx + Dt * Epsi.dx(0) * Euh * xi_xix * dx
+                #               - 1.5 * Dt * Epsi * Euh.dx(0) * xi_xix * dx - 0.5 * Dt * Epsi * Euh * (3 * xi_xixx + 2 * xix_xix) * dx
+                #               + 0.5 * Ezeta * Euh * (4 * xix_xix + 4 * xi_xixx - alphasq * xi_xixxxx - 2 * alphasq * xix_xixxx - alphasq * xixx_xixx) * dx
+                #               + 0.5 * Ezeta * Euh.dx(0) * (3 * xi_xix - alphasq * xi_xixxx + alphasq * xix_xixx) * dx)
+
+
+                self.Eu1, EFh, EGh = Ew1.split()
+
+                uprob = NonlinearVariationalProblem(ueqn, w1)
+                Euprob = NonlinearVariationalProblem(Eueqn, Ew1)
+                self.usolver = NonlinearVariationalSolver(uprob,
+                                                          solver_parameters={'mat_type': 'aij',
+                                                                             'ksp_type': 'preonly',
+                                                                             'pc_type': 'lu'})
+                self.Eusolver = NonlinearVariationalSolver(Euprob,
+                                                           solver_parameters={'mat_type': 'aij',
+                                                                             'ksp_type': 'preonly',
+                                                                             'pc_type': 'lu'})
+
+
             elif self.scheme == 'upwind' and self.timestepping == 'midpoint':
                 Vm = prognostic_variables.Vm
                 Vu = prognostic_variables.Vu
@@ -251,6 +504,56 @@ class Equations(object):
 
             # now solve inverse problem for u
             self.usolver.solve()
+
+        elif self.scheme == 'LASCH' and self.timestepping == 'ssprk3':
+            # do three step RK method for m
+            self.m_trial.assign(self.m0)
+            self.msolver.solve()
+            self.m_trial.assign(self.m0 + self.dm)
+            self.msolver.solve()
+            self.m_trial.assign(3./4*self.m0 + 1./4*(self.m_trial + self.dm))
+            self.msolver.solve()
+            self.m.assign(1./3*self.m0 + 2./3*(self.m_trial + self.dm))
+            self.m0.assign(self.m)
+
+            # do three step RK method for Em
+            self.Em_trial.assign(self.Em0)
+            for Lsolver, L2solver in zip(self.Lxisolvers, self.L2xisolvers):
+                Lsolver.solve()
+                L2solver.solve()
+            self.Emsolver.solve()
+            self.Em_trial.assign(self.Em0 + self.dEm)
+            for Lsolver, L2solver in zip(self.Lxisolvers, self.L2xisolvers):
+                Lsolver.solve()
+                L2solver.solve()
+            self.Emsolver.solve()
+            self.Em_trial.assign(3./4*self.Em0 + 1./4*(self.Em_trial + self.dEm))
+            for Lsolver, L2solver in zip(self.Lxisolvers, self.L2xisolvers):
+                Lsolver.solve()
+                L2solver.solve()
+            self.Emsolver.solve()
+            self.Em.assign(1./3*self.Em0 + 2./3*(self.Em_trial + self.dEm))
+            self.Em0.assign(self.Em)
+
+            # now solve inverse problem for u
+            self.Eusolver.solve()
+            self.usolver.solve()
+
+        elif self.scheme == 'LASCH' and self.timestepping == 'midpoint':
+            self.msolver.solve()
+            self.m.assign(self.m_trial)
+            self.Emsolver.solve()
+            self.Em.assign(self.Em_trial)
+            self.usolver.solve()
+            self.Eusolver.solve()
+            self.m0.assign(self.m)
+            self.Em0.assign(self.Em)
+
+        elif self.scheme == 'LASCH_hydrodynamic' and self.timestepping == 'midpoint':
+            self.Eusolver.solve()
+            self.usolver.solve()
+            self.Eu.assign(self.Eu1)
+            self.u.assign(self.u1)
 
         elif self.scheme == 'upwind' and self.timestepping == 'midpoint':
             self.msolver.solve()
