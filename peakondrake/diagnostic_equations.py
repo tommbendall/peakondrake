@@ -30,6 +30,7 @@ class DiagnosticEquations(object):
         u = self.prognostic_variables.u
         Xi = self.prognostic_variables.Xi
         Vu = u.function_space()
+        vector_u = True if Vu.ufl_element() == VectorElement else False
         ones = Function(VectorFunctionSpace(self.prognostic_variables.mesh, "CG", 1)).project(as_vector([Constant(1.0)]))
         self.to_update_constants = False
         self.interpolators = []
@@ -72,6 +73,12 @@ class DiagnosticEquations(object):
                 uscalar = self.diagnostic_variables.fields['uscalar']
                 u_interpolator = Interpolator(dot(ones, u), uscalar)
                 self.interpolators.append(u_interpolator)
+
+            elif key == 'Euscalar':
+                Eu = self.prognostic_variables.Eu
+                Euscalar = self.diagnostic_variables.fields['Euscalar']
+                Eu_interpolator = Interpolator(dot(ones, Eu), Euscalar)
+                self.interpolators.append(Eu_interpolator)
 
             elif key == 'Xiscalar':
                 Xi = self.prognostic_variables.Xi
@@ -280,6 +287,61 @@ class DiagnosticEquations(object):
                 prob = NonlinearVariationalProblem(eqn, u_sde_weak)
                 solver = NonlinearVariationalSolver(prob)
                 self.solvers.append(solver)
+
+            elif key == 'pure_xi':
+                pure_xi = 0.0*x
+                for xi in self.prognostic_variables.pure_xi_list:
+                    if vector_u:
+                        pure_xi += dot(ones, xi)
+                    else:
+                        pure_xi += xi
+                Xiscalar = self.diagnostic_variables.fields['pure_xi']
+                Xi_interpolator = Interpolator(pure_xi, Xiscalar)
+                self.interpolators.append(Xi_interpolator)
+
+            elif key == 'pure_xi_x':
+                pure_xi_x = 0.0*x
+                for xix in self.prognostic_variables.pure_xi_x_list:
+                    if vector_u:
+                        pure_xi_x += dot(ones, xix)
+                    else:
+                        pure_xi_x += xix
+                Xiscalar = self.diagnostic_variables.fields['pure_xi_x']
+                Xi_interpolator = Interpolator(pure_xi_x, Xiscalar)
+                self.interpolators.append(Xi_interpolator)
+
+            elif key == 'pure_xi_xx':
+                pure_xi_xx = 0.0*x
+                for xixx in self.prognostic_variables.pure_xi_xx_list:
+                    if vector_u:
+                        pure_xi_xx += dot(ones, xixx)
+                    else:
+                        pure_xi_xx += xixx
+                Xiscalar = self.diagnostic_variables.fields['pure_xi_xx']
+                Xi_interpolator = Interpolator(pure_xi_xx, Xiscalar)
+                self.interpolators.append(Xi_interpolator)
+
+            elif key == 'pure_xi_xxx':
+                pure_xi_xxx = 0.0*x
+                for xixxx in self.prognostic_variables.pure_xi_xxx_list:
+                    if vector_u:
+                        pure_xi_xxx += dot(ones, xixxx)
+                    else:
+                        pure_xi_xxx += xixxx
+                Xiscalar = self.diagnostic_variables.fields['pure_xi_xxx']
+                Xi_interpolator = Interpolator(pure_xi_xxx, Xiscalar)
+                self.interpolators.append(Xi_interpolator)
+
+            elif key == 'pure_xi_xxxx':
+                pure_xi_xxxx = 0.0*x
+                for xixxxx in self.prognostic_variables.pure_xi_xx_list:
+                    if vector_u:
+                        pure_xi_xxxx += dot(ones, xixxxx)
+                    else:
+                        pure_xi_xxxx += xixxxx
+                Xiscalar = self.diagnostic_variables.fields['pure_xi_xxxx']
+                Xi_interpolator = Interpolator(pure_xi_xxxx, Xiscalar)
+                self.interpolators.append(Xi_interpolator)
 
             else:
                 raise NotImplementedError('Diagnostic %s not yet implemented' % key)

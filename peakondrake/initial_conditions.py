@@ -24,20 +24,29 @@ def build_initial_conditions(prognostic_variables, simulation_parameters):
     deltax = Ld / simulation_parameters['resolution'][-1]
     epsilon = 1
 
-    ic_dict = {'two_peaks': (0.2*2/(exp(x-403./15.) + exp(-x+403./15.))
-                             + 0.5*2/(exp(x-203./15.)+exp(-x+203./15.))),
+    ic_dict = {'two_peaks': (0.2*2/(exp(x-403./15.*40./Ld) + exp(-x+403./15.*40./Ld))
+                             + 0.5*2/(exp(x-203./15.*40./Ld)+exp(-x+203./15.*40./Ld))),
                'gaussian': 0.5*exp(-((x-10.)/2.)**2),
                'gaussian_narrow': 0.5*exp(-((x-10.)/1.)**2),
                'gaussian_wide': 0.5*exp(-((x-10.)/3.)**2),
-               'peakon': conditional(x < 20., exp((x-20.)/1.), exp(-(x-20.)/1.)),
-               'one_peak': 0.5*2/(exp(x-203./15.)+exp(-x+203./15.)),
+               'peakon': conditional(x < Ld/2., exp((x-Ld/2)/sqrt(alphasq)), exp(-(x-Ld/2)/sqrt(alphasq))),
+               'one_peak': 0.5*2/(exp(x-203./15.*40./Ld)+exp(-x+203./15.*40./Ld)),
                'flat': Constant(2*pi**2/(9*40**2)),
+               'fast_flat': Constant(0.1),
                'coshes': Constant(2000)*cosh((2000**0.5/2)*(x-0.75))**(-2)+Constant(1000)*cosh(1000**0.5/2*(x-0.25))**(-2),
-               'd_peakon':exp(-sqrt((x-Ld/2)**2 + epsilon * deltax ** 2) / sqrt(alphasq))}
+               'd_peakon':exp(-sqrt((x-Ld/2)**2 + epsilon * deltax ** 2) / sqrt(alphasq)),
+               'zero': Constant(0.0),
+               'two_peakons': conditional(x < Ld/4, exp((x-Ld/4)/sqrt(alphasq)) - exp(-(x+Ld/4)/sqrt(alphasq)),
+                                          conditional(x < 3*Ld/4, exp(-(x-Ld/4)/sqrt(alphasq)) - exp((x-3*Ld/4)/sqrt(alphasq)),
+                                                      exp((x-5*Ld/4)/sqrt(alphasq)) - exp(-(x-3*Ld/4)/sqrt(alphasq)))),
+               'twin_peakons': conditional(x < Ld/4, exp((x-Ld/4)/sqrt(alphasq)) + 0.5* exp((x-Ld/2)/sqrt(alphasq)),
+                                           conditional(x < Ld/2, exp(-(x-Ld/4)/sqrt(alphasq)) + 0.5* exp((x-Ld/2)/sqrt(alphasq)),
+                                                       conditional(x < 3*Ld/4, exp(-(x-Ld/4)/sqrt(alphasq)) + 0.5 * exp(-(x-Ld/2)/sqrt(alphasq)),
+                                                                   exp((x-5*Ld/4)/sqrt(alphasq)) + 0.5 * exp(-(x-Ld/2)/sqrt(alphasq)))))}
 
     ic_expr = ic_dict[ic]
 
-    if prognostic_variables.scheme == 'upwind':
+    if prognostic_variables.scheme in ['upwind', 'LASCH']:
 
         VCG5 = FunctionSpace(mesh, "CG", 5)
         smooth_condition = Function(VCG5).interpolate(ic_expr)
@@ -57,7 +66,11 @@ def build_initial_conditions(prognostic_variables, simulation_parameters):
         msolver0.solve()
         prognostic_variables.m.interpolate(m_CG)
 
-    elif prognostic_variables.scheme in ('conforming', 'hydrodynamic', 'test'):
+        if prognostic_variables.scheme == 'LASCH':
+            prognostic_variables.Eu.assign(prognostic_variables.u)
+            prognostic_variables.Em.assign(prognostic_variables.m)
+
+    elif prognostic_variables.scheme in ('conforming', 'hydrodynamic', 'test', 'LASCH_hydrodynamic'):
         if ic == 'peakon':
             Vu = prognostic_variables.Vu
             # delta = Function(Vu)
@@ -94,6 +107,8 @@ def build_initial_conditions(prognostic_variables, simulation_parameters):
             smooth_condition = Function(VCG5).interpolate(ic_expr)
             prognostic_variables.u.project(smooth_condition)
 
+        if prognostic_variables.scheme == 'LASCH_hydrodynamic':
+            prognostic_variables.Eu.assign(prognostic_variables.u)
 
     else:
         raise NotImplementedError('Other schemes not yet implemented.')
