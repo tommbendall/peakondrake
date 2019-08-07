@@ -3,15 +3,15 @@ from netCDF4 import Dataset
 
 base_code = 'peakon_energy'
 Ld = 40.
-tmax = 100
-dt = 1e-3
+tmax = 1000
+dt = 1e-2
 
 
 experiment(base_code, Ld, tmax,
            resolutions=10000,
            dts=dt,
-           sigmas=0.02,
-           seeds=range(1000),
+           sigmas=0.2,
+           seeds=range(50),
            schemes='hydrodynamic',
            timesteppings='midpoint',
            ics='peakon',
