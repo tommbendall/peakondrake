@@ -2,7 +2,7 @@ from peakondrake import *
 from netCDF4 import Dataset
 from datetime import datetime
 
-code = 'final_peakon_convergence_dx'
+code = 'gahito_final_peakon_convergence_dx'
 Ld = 40.
 tmax = 10
 dt = 1e-5
@@ -28,7 +28,7 @@ experiment(code, Ld, tmax,
            field_ndump=int(tmax / (4 * dt)),
            allow_fail=True,
            peakon_equations=False,
-           true_peakon_data='true_peakon_data',
+           true_peakon_data='gahito_true_peakon_data',
            nXi_updates=10)
 
 endtime = datetime.now()

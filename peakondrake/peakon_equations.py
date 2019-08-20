@@ -14,8 +14,10 @@ class PeakonEquations(object):
 
         self.Xi = prognostic_variables.Xi
         self.Xi_x = prognostic_variables.Xi_x
+        self.Xi_xx = prognostic_variables.Xi_xx
         self.pure_xi_list = prognostic_variables.pure_xi_list
         self.pure_xi_x_list = prognostic_variables.pure_xi_x_list
+        self.pure_xi_xx_list = prognostic_variables.pure_xi_xx_list
         self.u = prognostic_variables.u
         mesh = simulation_parameters['mesh'][-1]
         x, = SpatialCoordinate(mesh)
@@ -33,8 +35,8 @@ class PeakonEquations(object):
 
         dp = - self.dt ** 0.5 * self.p * self.Xi_x.at(self.q, tolerance=1e-6)
         dq = self.p * self.dt + self.dt ** 0.5 * self.Xi.at(self.q, tolerance=1e-6)
-        for pure_xi, pure_xi_x in zip(self.pure_xi_list, self.pure_xi_x_list):
-            dp += 0.5 * self.p * pure_xi_x.at(self.q, tolerance=1e-6) ** 2 * self.dt
+        for pure_xi, pure_xi_x, pure_xi_xx in zip(self.pure_xi_list, self.pure_xi_x_list, self.pure_xi_xx_list):
+            dp += 0.5 * self.p * (pure_xi_x.at(self.q, tolerance=1e-6) ** 2 - pure_xi.at(self.q, tolerance=1e-6) * pure_xi_xx.at(self.q, tolerance=1e-6)) * self.dt
             dq += 0.5 * pure_xi.at(self.q, tolerance=1e-6) * pure_xi_x.at(self.q, tolerance=1e-6) * self.dt
 
         self.p += dp

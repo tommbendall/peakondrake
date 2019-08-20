@@ -2,7 +2,7 @@ from peakondrake import *
 from netCDF4 import Dataset
 from datetime import datetime
 
-base_code = 'final_peakon_convergence_strong_dt'
+base_code = 'gahito_final_peakon_convergence_strong_dt'
 Ld = 40.
 tmax = 10
 dt_true = 1e-5
@@ -32,7 +32,7 @@ for i, dt in enumerate(dts):
                field_ndump=int(tmax / (1 * dt)),
                allow_fail=True,
                peakon_equations=False,
-               true_peakon_data='true_peakon_data',
+               true_peakon_data='gahito_true_peakon_data',
                nXi_updates=int(dt/dt_true))
 
 endtime = datetime.now()

@@ -1,7 +1,7 @@
 from peakondrake import *
 from netCDF4 import Dataset
 
-base_code = 'true_peakon_data'
+base_code = 'gahito_true_peakon_data'
 Ld = 40.
 tmax = 10
 dt = 1e-5

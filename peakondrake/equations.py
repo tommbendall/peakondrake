@@ -229,14 +229,9 @@ class Equations(object):
 
             elif self.scheme == 'LASCH_hydrodynamic' and self.timestepping == 'midpoint':
                 Vu = prognostic_variables.Vu
-                Vm = prognostic_variables.Vm
                 self.u = prognostic_variables.u
-                self.m = prognostic_variables.m
-                self.Em = prognostic_variables.Em
                 self.Eu = prognostic_variables.Eu
                 self.Xi = prognostic_variables.Xi
-                self.m0 = Function(Vm).assign(self.m)
-                self.Em0 = Function(Vm).assign(self.Em)
                 pure_xis = prognostic_variables.pure_xi_list
                 pure_xixs = prognostic_variables.pure_xi_x_list
                 pure_xixxs = prognostic_variables.pure_xi_xx_list
@@ -246,34 +241,10 @@ class Equations(object):
                 self.u = prognostic_variables.u
                 self.Eu = prognostic_variables.Eu
 
-                W = MixedFunctionSpace((Vu,)*3)
-                psi, phi, zeta = TestFunctions(W)
+                We = MixedFunctionSpace((Vu,)*3)
 
-                w1 = Function(W)
-                self.u1, dFh, dG = split(w1)
-
-                uh  = (self.u1 + self.u) / 2
-                dXi = sqrt(Dt) * prognostic_variables.Xi
-                dXi_x = sqrt(Dt) * prognostic_variables.Xi_x
-                dXi_xx = sqrt(Dt) * prognostic_variables.Xi_xx
-                dv = Dt * self.Eu + dXi
-
-                ueqn = (psi * (self.u1 - self.u) * dx
-                      + psi * uh.dx(0) * dv * dx
-                      + psi * dFh * dx
-                      + phi * dFh * dx + alphasq * phi.dx(0) * dFh.dx(0) * dx
-                      - phi * 2 * uh * dv.dx(0) * dx - alphasq * phi * uh.dx(0) * dG.dx(0) * dx
-                      + zeta * dG * dx + zeta.dx(0) * dv * dx)  # note there are lots of different ways we could do this
-
-                # could have dG as double derivative if we want
-                # or could solve just for Eu_xx
-                # or could solve for Em
-
-                self.u1, Fh, Gh = w1.split()
-
-
-                Epsi, Ephi, Ezeta = TestFunctions(W)
-                Ew1 = Function(W)
+                Epsi, Ephi, Ezeta = TestFunctions(We)
+                Ew1 = Function(We)
                 self.Eu1, EFh, EGh = split(Ew1)
 
                 Euh = (self.Eu1 + self.Eu) / 2
@@ -292,14 +263,63 @@ class Equations(object):
                               - 0.5 * Ezeta * Euh * (4 * xix * xix + 4 * xi * xixx - alphasq * xi * xixxxx - 2 * alphasq * xix * xixxx - alphasq * xixx * xixx) * dx
                               - 0.5 * Ezeta * Euh.dx(0) * (3 * xi * xix - alphasq * xixxx * xi + alphasq * xixx * xix) * dx)
 
-                # for xi_xi, xi_xix, xi_xixx, xi_xixxx, xi_xixxxx, xix_xix, xix_xixx, xix_xixxx, xixx_xixx in zip(pure_xi_xis, pure_xi_xixs, pure_xi_xixxs, pure_xi_xixxxs, pure_xi_xixxxxs, pure_xix_xixs, pure_xix_xixxs, pure_xix_xixxxs, pure_xixx_xixxs):
-                #     Eueqn -= (0.5 * Dt * Epsi.dx(0) * Euh.dx(0) * xi_xi * dx + Dt * Epsi.dx(0) * Euh * xi_xix * dx
-                #               - 1.5 * Dt * Epsi * Euh.dx(0) * xi_xix * dx - 0.5 * Dt * Epsi * Euh * (3 * xi_xixx + 2 * xix_xix) * dx
-                #               + 0.5 * Ezeta * Euh * (4 * xix_xix + 4 * xi_xixx - alphasq * xi_xixxxx - 2 * alphasq * xix_xixxx - alphasq * xixx_xixx) * dx
-                #               + 0.5 * Ezeta * Euh.dx(0) * (3 * xi_xix - alphasq * xi_xixxx + alphasq * xix_xixx) * dx)
-
-
                 self.Eu1, EFh, EGh = Ew1.split()
+
+                W = MixedFunctionSpace((Vu,)*4)
+
+                psi, phi, zeta, Lambda = TestFunctions(W)
+                w1 = Function(W)
+                self.u1, dFh, dGh, H = split(w1)
+                uh = (self.u1 + self.u) / 2
+                dXi = sqrt(Dt) * prognostic_variables.Xi
+                dXi_x = sqrt(Dt) * prognostic_variables.Xi_x
+                dXi_xx = sqrt(Dt) * prognostic_variables.Xi_xx
+                dv = Dt * (self.Eu + self.Eu1) / 2 + dXi
+                DU = (self.Eu + self.Eu1) / 2 - uh
+
+                # Lambda = TestFunction(Vu)
+                # H = Function(Vu)
+                # Heqn = Lambda * H * dx + Lambda.dx(0) * DU.dx(0) * dx
+                # Hprob = NonlinearVariationalProblem(Heqn, H)
+                # self.Hsolver = NonlinearVariationalSolver(Hprob)
+
+                ueqn = (psi * (self.u1 - self.u) * dx
+                        + psi * uh.dx(0) * dv * dx
+                        - psi.dx(0) * dFh * dx
+                        + psi * dGh * dx
+                        + phi * dFh * dx + alphasq * phi.dx(0) * dFh.dx(0) * dx
+                        - phi * Dt * uh * uh * dx - alphasq / 2 * phi * Dt * uh.dx(0) * uh.dx(0) * dx
+                        + zeta * dGh * dx + alphasq * zeta.dx(0) * dGh.dx(0) * dx
+                        - 2 * zeta * uh * dXi.dx(0) * dx - alphasq * zeta * uh.dx(0) * dXi_xx * dx
+                        - 2 * zeta * Dt * uh * DU.dx(0) * dx - alphasq * zeta * Dt * uh.dx(0) * H * dx
+                        + Lambda * H * dx + Lambda.dx(0) * DU.dx(0) * dx)
+
+                self.u1, dFh, dGh, H = w1.split()
+
+
+                # psi, phi, zeta = TestFunctions(W)
+                #
+                # w1 = Function(W)
+                # self.u1, dFh, dG = split(w1)
+                #
+                # uh  = (self.u1 + self.u) / 2
+                # dXi = sqrt(Dt) * prognostic_variables.Xi
+                # dXi_x = sqrt(Dt) * prognostic_variables.Xi_x
+                # dXi_xx = sqrt(Dt) * prognostic_variables.Xi_xx
+                # dv = Dt * (self.Eu + self.Eu1) / 2 + dXi
+                #
+                # ueqn = (psi * (self.u1 - self.u) * dx
+                #       + psi * uh.dx(0) * dv * dx
+                #       + psi * dFh * dx
+                #       + phi * dFh * dx + alphasq * phi.dx(0) * dFh.dx(0) * dx
+                #       - phi * 2 * uh * dv.dx(0) * dx - alphasq * phi * uh.dx(0) * dG * dx
+                #       + zeta * dG * dx + zeta.dx(0) * dv.dx(0) * dx)  # note there are lots of different ways we could do this
+                # # ENSURE THAT THIS EQUATION IS THE SAME AS EU EQN. STOP PEAKONS FROM GROWING!
+                # # could have dG as double derivative if we want
+                # # or could solve just for Eu_xx
+                # # or could solve for Em
+                #
+                # self.u1, Fh, Gh = w1.split()
 
                 uprob = NonlinearVariationalProblem(ueqn, w1)
                 Euprob = NonlinearVariationalProblem(Eueqn, Ew1)
@@ -550,6 +570,7 @@ class Equations(object):
             self.Em0.assign(self.Em)
 
         elif self.scheme == 'LASCH_hydrodynamic' and self.timestepping == 'midpoint':
+            # self.Hsolver.solve()
             self.Eusolver.solve()
             self.usolver.solve()
             self.Eu.assign(self.Eu1)
