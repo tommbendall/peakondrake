@@ -64,8 +64,6 @@ class Outputting(object):
             diagnostic_variables = [value for value in self.diagnostic_variables.dumpfields.values()]
             self.dumpfields = prognostic_variables + diagnostic_variables
 
-            self.field_file.write(*self.dumpfields, t=0)
-
         self.out_string = ''
         for key, value in simulation_parameters.items():
             if len(value) > 1:

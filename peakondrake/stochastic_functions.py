@@ -77,9 +77,12 @@ class StochasticFunctions(object):
                 else:
                     self.Xi_functions.append(cos(4*(n+1)*pi*x/Ld))
 
-        elif self.Xi_family == 'flat':
+        elif self.Xi_family == 'high_freq_sines':
             for n in range(self.num_Xis):
-                self.Xi_functions.append(Constant(1.0))
+                if (n+1) % 2 == 1:
+                    self.Xi_functions.append(sin((2*(n+1)+10)*pi*x/Ld))
+                else:
+                    self.Xi_functions.append(cos((2*(n+1)+10)*pi*x/Ld))
 
         elif self.Xi_family == 'gaussians':
             for n in range(self.num_Xis):

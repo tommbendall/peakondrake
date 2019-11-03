@@ -1,5 +1,5 @@
 from peakondrake.simulation import *
-from firedrake import PeriodicIntervalMesh
+from firedrake import PeriodicIntervalMesh, File
 from os import path, makedirs
 from netCDF4 import Dataset
 from collections import OrderedDict
@@ -17,7 +17,7 @@ def experiment(code, Ld, tmax, resolutions=[],
                t_kick=[], sigma_kick=0.0, smooth_t=None,
                peakon_equations=False, only_peakons=False,
                true_peakon_data=None, true_mean_peakon_data=None,
-               peakon_speed=None):
+               peakon_speed=None, expected_u=False):
 
     # set up dumping
     dirname = 'results/'+code
@@ -150,7 +150,8 @@ def experiment(code, Ld, tmax, resolutions=[],
                 mesh = PeriodicIntervalMesh(resolution, Ld)
                 simulation_parameters['mesh'] = (mesh,)
             do_simulation_loop(N, variable_parameters, simulation_parameters,
-                               diagnostics=diagnostics, fields_to_output=fields_to_output)
+                               diagnostics=diagnostics, fields_to_output=fields_to_output,
+                               expected_u=expected_u)
         else:
             resolution = simulation_parameters['resolution'][-1]
             mesh = PeriodicIntervalMesh(resolution, Ld)
@@ -160,7 +161,7 @@ def experiment(code, Ld, tmax, resolutions=[],
                        fields_to_output=fields_to_output)
 
 def do_simulation_loop(N, variable_parameters, simulation_parameters,
-                       diagnostics=None, fields_to_output=None):
+                       diagnostics=None, fields_to_output=None, expected_u=False):
     """
     A recursive strategy for setting up a variable number of for loops
     for the experiment.
@@ -175,6 +176,7 @@ def do_simulation_loop(N, variable_parameters, simulation_parameters,
     # we do the loop in reverse order to get the resolution loop on the outside
     M = len(variable_parameters)
     key = list(variable_parameters.items())[M-N][0]
+    have_setup = False
 
     # we must turn the ordered dict into a list to iterate through it
     for index, value in enumerate(list(variable_parameters.items())[M-N][1][1]):
@@ -188,11 +190,33 @@ def do_simulation_loop(N, variable_parameters, simulation_parameters,
         # do recursion if we aren't finished yet
         if N > 1:
             do_simulation_loop(N-1, variable_parameters, simulation_parameters,
-                               diagnostics=diagnostics, fields_to_output=fields_to_output)
+                               diagnostics=diagnostics, fields_to_output=fields_to_output, expected_u=expected_u)
 
         # finally do simulation
         elif N == 1:
 
-            simulation(simulation_parameters,
-                       diagnostic_values=diagnostics,
-                       fields_to_output=fields_to_output)
+            if expected_u:
+                this_u = simulation(simulation_parameters,
+                           diagnostic_values=diagnostics,
+                           fields_to_output=fields_to_output,
+                           expected_u=True)
+                if have_setup:
+                    Eu.assign(counter * Eu + this_u)
+                    counter.assign(counter + 1)
+                    Eu.assign(Eu / counter)
+                else:
+                    scheme = simulation_parameters['scheme'][-1]
+                    mesh = simulation_parameters['mesh'][-1]
+                    prognostic_variables = PrognosticVariables(scheme, mesh)
+                    Eu = Function(prognostic_variables.Vu, name='expected u').assign(this_u)
+                    counter = Constant(1.0)
+                    have_setup = True
+            else:
+                simulation(simulation_parameters,
+                           diagnostic_values=diagnostics,
+                           fields_to_output=fields_to_output)
+
+
+    if expected_u:
+        expected_u_file = File(simulation_parameters['dirname'][-1]+'/expected_u.pvd')
+        expected_u_file.write(Eu)
