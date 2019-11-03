@@ -6,7 +6,7 @@ Ld = 40.
 tmax = 80
 dt = 0.001
 i = 9
-code = 'final_mu_experiment_'+str(i)
+code = 'final_wavy_mu_experiment_'+str(i)
 
 starttime = datetime.now()
 
@@ -18,8 +18,8 @@ experiment(code, Ld, tmax,
            schemes='hydrodynamic',
            timesteppings='midpoint',
            ics='one_peak',
-           num_Xis=6,
-           Xi_family='sines',
+           num_Xis=12,
+           Xi_family='double_sines',
            alphasq=1.0,
            c0=0.,
            gamma=0.,
