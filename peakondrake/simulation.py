@@ -10,7 +10,8 @@ import numpy as np
 
 def simulation(simulation_parameters,
                diagnostic_values=None,
-               fields_to_output=None):
+               fields_to_output=None,
+               expected_u=False):
 
     """
     This function sets up and runs a basic simulation of the stochastic
@@ -83,6 +84,9 @@ def simulation(simulation_parameters,
     failed = True if only_peakons else False
     failed_time = np.nan
 
+    outputting.dump_diagnostics(t)
+    outputting.dump_fields(t)
+
     # run simulation
     while (t < tmax - 0.5*dt):
         t += dt
@@ -127,6 +131,9 @@ def simulation(simulation_parameters,
 
     outputting.store_times(failed_time)
 
+    if expected_u:
+        return prognostic_variables.u
+
 class PrognosticVariables(object):
     """
     Object setting up and storing the prognostic variables
@@ -161,6 +168,36 @@ class PrognosticVariables(object):
             self.fields['m'] = self.m
             self.fields['Em'] = self.Em
         elif scheme == 'LASCH_hydrodynamic':
+            self.Vm = FunctionSpace(mesh, "CG", 1)
+            self.Vu = FunctionSpace(mesh, "CG", 1)
+            self.m = Function(self.Vm, name='m')
+            self.u = Function(self.Vu, name='u')
+            self.Em = Function(self.Vm, name='Em')
+            self.Eu = Function(self.Vu, name='Eu')
+            self.fields['u'] = self.u
+            self.fields['Eu'] = self.Eu
+            self.fields['m'] = self.m
+            self.fields['Em'] = self.Em
+            self.Xi_x = Function(self.Vu, name='Xi_x')
+            self.Xi_xx = Function(self.Vu, name='Xi_xx')
+            self.fields['Xi_x'] = self.Xi_x
+            self.fields['Xi_xx'] = self.Xi_xx
+        elif scheme == 'LASCH_hydrodynamic_m':
+            self.Vm = FunctionSpace(mesh, "CG", 1)
+            self.Vu = FunctionSpace(mesh, "CG", 1)
+            self.m = Function(self.Vm, name='m')
+            self.u = Function(self.Vu, name='u')
+            self.Em = Function(self.Vm, name='Em')
+            self.Eu = Function(self.Vu, name='Eu')
+            self.fields['u'] = self.u
+            self.fields['Eu'] = self.Eu
+            self.fields['m'] = self.m
+            self.fields['Em'] = self.Em
+            self.Xi_x = Function(self.Vu, name='Xi_x')
+            self.Xi_xx = Function(self.Vu, name='Xi_xx')
+            self.fields['Xi_x'] = self.Xi_x
+            self.fields['Xi_xx'] = self.Xi_xx
+        elif scheme == 'no_gradient':
             self.Vm = FunctionSpace(mesh, "CG", 1)
             self.Vu = FunctionSpace(mesh, "CG", 1)
             self.m = Function(self.Vm, name='m')

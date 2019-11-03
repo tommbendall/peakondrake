@@ -238,9 +238,6 @@ class Equations(object):
                 pure_xixxxs = prognostic_variables.pure_xi_xxx_list
                 pure_xixxxxs = prognostic_variables.pure_xi_xxxx_list
 
-                self.u = prognostic_variables.u
-                self.Eu = prognostic_variables.Eu
-
                 We = MixedFunctionSpace((Vu,)*3)
 
                 Epsi, Ephi, Ezeta = TestFunctions(We)
@@ -277,12 +274,6 @@ class Equations(object):
                 dv = Dt * (self.Eu + self.Eu1) / 2 + dXi
                 DU = (self.Eu + self.Eu1) / 2 - uh
 
-                # Lambda = TestFunction(Vu)
-                # H = Function(Vu)
-                # Heqn = Lambda * H * dx + Lambda.dx(0) * DU.dx(0) * dx
-                # Hprob = NonlinearVariationalProblem(Heqn, H)
-                # self.Hsolver = NonlinearVariationalSolver(Hprob)
-
                 ueqn = (psi * (self.u1 - self.u) * dx
                         + psi * uh.dx(0) * dv * dx
                         - psi.dx(0) * dFh * dx
@@ -296,31 +287,6 @@ class Equations(object):
 
                 self.u1, dFh, dGh, H = w1.split()
 
-
-                # psi, phi, zeta = TestFunctions(W)
-                #
-                # w1 = Function(W)
-                # self.u1, dFh, dG = split(w1)
-                #
-                # uh  = (self.u1 + self.u) / 2
-                # dXi = sqrt(Dt) * prognostic_variables.Xi
-                # dXi_x = sqrt(Dt) * prognostic_variables.Xi_x
-                # dXi_xx = sqrt(Dt) * prognostic_variables.Xi_xx
-                # dv = Dt * (self.Eu + self.Eu1) / 2 + dXi
-                #
-                # ueqn = (psi * (self.u1 - self.u) * dx
-                #       + psi * uh.dx(0) * dv * dx
-                #       + psi * dFh * dx
-                #       + phi * dFh * dx + alphasq * phi.dx(0) * dFh.dx(0) * dx
-                #       - phi * 2 * uh * dv.dx(0) * dx - alphasq * phi * uh.dx(0) * dG * dx
-                #       + zeta * dG * dx + zeta.dx(0) * dv.dx(0) * dx)  # note there are lots of different ways we could do this
-                # # ENSURE THAT THIS EQUATION IS THE SAME AS EU EQN. STOP PEAKONS FROM GROWING!
-                # # could have dG as double derivative if we want
-                # # or could solve just for Eu_xx
-                # # or could solve for Em
-                #
-                # self.u1, Fh, Gh = w1.split()
-
                 uprob = NonlinearVariationalProblem(ueqn, w1)
                 Euprob = NonlinearVariationalProblem(Eueqn, Ew1)
                 self.usolver = NonlinearVariationalSolver(uprob,
@@ -331,6 +297,89 @@ class Equations(object):
                                                            solver_parameters={'mat_type': 'aij',
                                                                              'ksp_type': 'preonly',
                                                                              'pc_type': 'lu'})
+
+            elif self.scheme == 'LASCH_hydrodynamic_m' and self.timestepping == 'midpoint':
+                Vu = prognostic_variables.Vu
+                self.u = prognostic_variables.u
+                self.Eu = prognostic_variables.Eu
+                self.Xi = prognostic_variables.Xi
+                pure_xis = prognostic_variables.pure_xi_list
+                pure_xixs = prognostic_variables.pure_xi_x_list
+                pure_xixxs = prognostic_variables.pure_xi_xx_list
+                pure_xixxxs = prognostic_variables.pure_xi_xxx_list
+                pure_xixxxxs = prognostic_variables.pure_xi_xxxx_list
+
+                self.Emh = prognostic_variables.Em
+
+
+                We = MixedFunctionSpace((Vu,)*3)
+
+                Epsi, Ephi, Ezeta = TestFunctions(We)
+                Ew1 = Function(We)
+                self.Eu1, EFh, EGh = split(Ew1)
+
+                Euh = (self.Eu1 + self.Eu) / 2
+
+                Eueqn = (Epsi * (self.Eu1 - self.Eu) * dx
+                         + Dt * Epsi * Euh * Euh.dx(0) * dx
+                         - Dt * Epsi.dx(0) * EFh * dx
+                         - Dt * Epsi * EGh * dx
+                         + Ephi * EFh * dx + alphasq * Ephi.dx(0) * EFh.dx(0) * dx
+                         - Ephi * 0.5 * alphasq * Euh.dx(0) * Euh.dx(0) * dx - Ephi * Euh * Euh * dx
+                         + Ezeta * EGh * dx + alphasq * Ezeta.dx(0) * EGh.dx(0) * dx)
+
+                for xi, xix, xixx, xixxx, xixxxx in zip(pure_xis, pure_xixs, pure_xixxs, pure_xixxxs, pure_xixxxxs):
+                    Eueqn += (0.5 * Dt * Epsi.dx(0) * Euh.dx(0) * xi * xi * dx + Dt * Epsi.dx(0) * Euh * xi * xix * dx
+                              + 1.5 * Dt * Epsi * Euh.dx(0) * xi * xix * dx + 0.5 * Dt * Epsi * Euh * (3 * xixx * xi + 2 * xix * xix) * dx
+                              - 0.5 * Ezeta * Euh * (4 * xix * xix + 4 * xi * xixx - alphasq * xi * xixxxx - 2 * alphasq * xix * xixxx - alphasq * xixx * xixx) * dx
+                              - 0.5 * Ezeta * Euh.dx(0) * (3 * xi * xix - alphasq * xixxx * xi + alphasq * xixx * xix) * dx)
+
+                self.Eu1, EFh, EGh = Ew1.split()
+                Euh = (self.Eu1 + self.Eu) / 2
+
+                mu = TestFunction(Vu)
+
+                # Emeqn = mu * self.Emh * dx - mu * Euh * dx + alphasq * mu.dx(0) * Euh.dx(0) * dx
+                # Emprob = NonlinearVariationalProblem(Emeqn, self.Emh)
+                Euh_xx = Function(Vu)
+                Emeqn = mu * Euh_xx * dx + mu.dx(0) * Euh.dx(0) * dx
+                Emprob = NonlinearVariationalProblem(Emeqn, Euh_xx)
+                self.Emsolver = NonlinearVariationalSolver(Emprob)
+
+                W = MixedFunctionSpace((Vu,)*2)
+
+                psi, phi = TestFunctions(W)
+                w1 = Function(W)
+                self.u1, dFh = split(w1)
+                uh = (self.u1 + self.u) / 2
+                dXi = sqrt(Dt) * prognostic_variables.Xi
+                dXi_x = sqrt(Dt) * prognostic_variables.Xi_x
+                dXi_xx = sqrt(Dt) * prognostic_variables.Xi_xx
+                dv = Dt * Euh + dXi
+
+                ueqn = (psi * (self.u1 - self.u) * dx
+                        + psi * uh.dx(0) * dv * dx
+                        + psi * dFh * dx
+                        + phi * dFh * dx + alphasq * phi.dx(0) * dFh.dx(0) * dx
+                        - 2 * phi * Dt * uh * Euh.dx(0) * dx
+                        - alphasq * phi * uh.dx(0) * Euh_xx * Dt * dx
+                        - phi * (2 * uh * dXi_x + alphasq * uh.dx(0) * dXi_xx) * dx)
+
+                self.u1, dFh = w1.split()
+
+                uprob = NonlinearVariationalProblem(ueqn, w1)
+                Euprob = NonlinearVariationalProblem(Eueqn, Ew1)
+                self.usolver = NonlinearVariationalSolver(uprob,
+                                                          solver_parameters={'mat_type': 'aij',
+                                                                             'ksp_type': 'preonly',
+                                                                             'pc_type': 'lu',
+                                                                             'ksp_rtol': 1.0e-8,
+                                                                             'ksp_atol': 1.0e-8})
+                self.Eusolver = NonlinearVariationalSolver(Euprob,
+                                                           solver_parameters={'mat_type': 'aij',
+                                                                             'ksp_type': 'preonly',
+                                                                             'pc_type': 'lu'})
+
 
 
             elif self.scheme == 'upwind' and self.timestepping == 'midpoint':
@@ -440,6 +489,42 @@ class Equations(object):
                                                           solver_parameters={'mat_type': 'aij',
                                                                              'ksp_type': 'preonly',
                                                                              'pc_type': 'lu'})
+
+            elif self.scheme == 'no_gradient' and self.timestepping == 'midpoint':
+                # a version of the hydrodynamic form but without exploiting the gradient
+                Vu = prognostic_variables.Vu
+
+                self.u = prognostic_variables.u
+
+                W = MixedFunctionSpace((Vu,)*3)
+                psi, phi, zeta = TestFunctions(W)
+
+                w1 = Function(W)
+                self.u1, dFh, uh_xx = split(w1)
+
+                uh  = (self.u1 + self.u) / 2
+                dXi = sqrt(Dt) * prognostic_variables.Xi
+                dXi_x = sqrt(Dt) * prognostic_variables.Xi_x
+                dXi_xx = sqrt(Dt) * prognostic_variables.Xi_xx
+                dvh = Dt * uh + dXi
+
+                Lu = (psi * (self.u1 - self.u) * dx
+                      + psi * uh.dx(0) * dvh * dx
+                      + psi * dFh * dx
+                      + phi * dFh * dx + alphasq * phi.dx(0) * dFh.dx(0) * dx
+                      - 2 * phi * uh * uh.dx(0) * Dt * dx - alphasq * phi * uh.dx(0) * uh_xx * Dt * dx
+                      - phi * (2 * uh * dXi_x + alphasq * uh.dx(0) * dXi_xx) * dx
+                      + zeta * uh_xx * dx + zeta.dx(0) * uh.dx(0) * dx)
+
+                self.u1, dFh, uh_xx = w1.split()
+
+                uprob = NonlinearVariationalProblem(Lu, w1)
+                self.usolver = NonlinearVariationalSolver(uprob,
+                                                          solver_parameters={'mat_type': 'aij',
+                                                                             'ksp_type': 'preonly',
+                                                                             'pc_type': 'lu',
+                                                                             'ksp_rtol': 1.0e-8,
+                                                                             'ksp_atol': 1.0e-8})
 
             elif self.scheme == 'test' and self.timestepping == 'midpoint':
                 self.u = prognostic_variables.u
@@ -570,8 +655,14 @@ class Equations(object):
             self.Em0.assign(self.Em)
 
         elif self.scheme == 'LASCH_hydrodynamic' and self.timestepping == 'midpoint':
-            # self.Hsolver.solve()
             self.Eusolver.solve()
+            self.usolver.solve()
+            self.Eu.assign(self.Eu1)
+            self.u.assign(self.u1)
+
+        elif self.scheme == 'LASCH_hydrodynamic_m' and self.timestepping == 'midpoint':
+            self.Eusolver.solve()
+            self.Emsolver.solve()
             self.usolver.solve()
             self.Eu.assign(self.Eu1)
             self.u.assign(self.u1)
@@ -593,6 +684,10 @@ class Equations(object):
                 self.m.assign(self.m1)
 
         elif self.scheme == 'hydrodynamic' and self.timestepping == 'midpoint':
+            self.usolver.solve()
+            self.u.assign(self.u1)
+
+        elif self.scheme == 'no_gradient' and self.timestepping == 'midpoint':
             self.usolver.solve()
             self.u.assign(self.u1)
 

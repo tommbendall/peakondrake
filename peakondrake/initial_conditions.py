@@ -70,7 +70,7 @@ def build_initial_conditions(prognostic_variables, simulation_parameters):
             prognostic_variables.Eu.assign(prognostic_variables.u)
             prognostic_variables.Em.assign(prognostic_variables.m)
 
-    elif prognostic_variables.scheme in ('conforming', 'hydrodynamic', 'test', 'LASCH_hydrodynamic'):
+    elif prognostic_variables.scheme in ('conforming', 'hydrodynamic', 'test', 'LASCH_hydrodynamic','LASCH_hydrodynamic_m', 'no_gradient'):
         if ic == 'peakon':
             Vu = prognostic_variables.Vu
             # delta = Function(Vu)
@@ -107,7 +107,7 @@ def build_initial_conditions(prognostic_variables, simulation_parameters):
             smooth_condition = Function(VCG5).interpolate(ic_expr)
             prognostic_variables.u.project(smooth_condition)
 
-        if prognostic_variables.scheme == 'LASCH_hydrodynamic':
+        if prognostic_variables.scheme in ['LASCH_hydrodynamic', 'LASCH_hydrodynamic_m']:
             prognostic_variables.Eu.assign(prognostic_variables.u)
 
     else:
