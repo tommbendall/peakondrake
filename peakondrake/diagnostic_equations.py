@@ -37,6 +37,11 @@ class DiagnosticEquations(object):
         self.projectors = []
         self.solvers = []
 
+        mesh = u.function_space().mesh()
+        x, = SpatialCoordinate(mesh)
+        alphasq = simulation_parameters['alphasq'][-1]
+        periodic = simulation_parameters['periodic'][-1]
+
         # do peakon data checks here
         true_peakon_data = simulation_parameters['true_peakon_data'][-1]
         if true_peakon_data is not None:
@@ -45,10 +50,13 @@ class DiagnosticEquations(object):
             ndump = simulation_parameters['ndump'][-1]
             tmax = simulation_parameters['tmax'][-1]
             dt = simulation_parameters['dt'][-1]
-            if len(self.true_peakon_file['time'][:]) != int(tmax/(ndump*dt)):
-                raise ValueError('If reading in true peakon data, the dump frequency must be the same as that used for the true peakon data.')
-            if self.true_peakon_file['p'][:].shape != (int(tmax/(ndump*dt)),):
-                raise ValueError('True peakon data must have same shape as proposed data!')
+            if len(self.true_peakon_file['time'][:]) != int(tmax/(ndump*dt))+1:
+                raise ValueError('If reading in true peakon data, the dump frequency must be the same as that used for the true peakon data.'+
+                                 ' Length of true peakon data as %i, but proposed length is %i'
+                                 % (len(self.true_peakon_file['time'][:]), int(tmax/(ndump*dt))+1))
+            if self.true_peakon_file['p'][:].shape != (int(tmax/(ndump*dt))+1,):
+                raise ValueError('True peakon data shape %i must be the same shape as proposed data %i'
+                                 % ((int(tmax/(ndump*dt))+1,), self.true_peakon_file['p'][:].shape))
 
         # do peakon data checks here
         true_mean_peakon_data = simulation_parameters['true_mean_peakon_data'][-1]
@@ -63,9 +71,6 @@ class DiagnosticEquations(object):
             if self.true_mean_peakon_file['p'][:].shape != (int(tmax/(ndump*dt)),):
                 raise ValueError('True peakon data must have same shape as proposed data!')
 
-        mesh = u.function_space().mesh()
-        x, = SpatialCoordinate(mesh)
-        alphasq = simulation_parameters['alphasq'][-1]
 
         for key, value in self.diagnostic_variables.fields.items():
 
@@ -252,9 +257,23 @@ class DiagnosticEquations(object):
                 self.q = Constant(Ld/2)
 
                 u_sde = self.diagnostic_variables.fields['u_sde']
-                expr = conditional(x < self.q - Ld / 2, self.p * exp(-(x-self.q+Ld)/sqrt(alphasq)),
-                                   conditional(x < self.q + Ld / 2, self.p * exp(-sqrt((self.q-x)**2/alphasq)),
-                                               self.p * exp(-(self.q+Ld-x)/sqrt(alphasq))))
+                if periodic:
+                    expr = conditional(x < self.q - Ld / 2, self.p * ((exp(-(x-self.q+Ld)/sqrt(alphasq))
+                                                                       + exp(-Ld/sqrt(alphasq)) * exp((x-self.q+Ld)/sqrt(alphasq)))
+                                                                       / (1 - exp(-Ld/sqrt(alphasq)))),
+                                       conditional(x < self.q + Ld / 2, self.p * ((exp(-sqrt((self.q-x)**2/alphasq))
+                                                                                   + exp(-Ld/sqrt(alphasq)) * exp(sqrt((self.q-x)**2/alphasq)))
+                                                                                  / (1 - exp(-Ld/sqrt(alphasq)))),
+                                                   self.p * ((exp(-(self.q+Ld-x)/sqrt(alphasq))
+                                                              + exp(-Ld/sqrt(alphasq) * exp((self.q+Ld-x)/sqrt(alphasq))))
+                                                             / (1 - exp(-Ld/sqrt(alphasq))))
+                                                   )
+                                       )
+                else:
+                    expr = conditional(x < self.q - Ld / 2, self.p * exp(-(x-self.q+Ld)/sqrt(alphasq)),
+                                       conditional(x < self.q + Ld / 2, self.p * exp(-sqrt((self.q-x)**2/alphasq)),
+                                                   self.p * exp(-(self.q+Ld-x)/sqrt(alphasq))))
+
                 self.interpolators.append(Interpolator(expr, u_sde))
 
             elif key == 'u_sde_weak':
@@ -271,6 +290,9 @@ class DiagnosticEquations(object):
                 self.to_update_constants = True
                 self.p = Constant(1.0)
                 self.q = Constant(Ld/2)
+
+                if periodic:
+                    raise NotImplementedError('u_sde_mean not yet implemented for periodic peakon')
 
                 u_sde = self.diagnostic_variables.fields['u_sde_mean']
                 expr = conditional(x < self.q - Ld / 2, self.p * exp(-(x-self.q+Ld)/sqrt(alphasq)),

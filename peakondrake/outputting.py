@@ -1,5 +1,5 @@
 from firedrake import (File, assemble, dx, dS, norm, dot,
-                       Function, op2, errornorm)
+                       Function, op2, errornorm, exp, sqrt)
 from netCDF4 import Dataset
 import numpy as np
 from datetime import datetime
@@ -72,6 +72,11 @@ class Outputting(object):
         # write initial wallclock time
         self.data_file['wallclock_time'][[slice(0,1)]+self.index_slices] = datetime.now().timestamp()
 
+        # set up coordinate field
+        if self.simulation_parameters['store_coordinates'][-1]:
+            self.data_file['x'][:] = self.diagnostic_variables.coords.dat.data[:]
+
+
     def dump_diagnostics(self, t, failed=False):
         """
         Dump the diagnostic values.
@@ -89,10 +94,15 @@ class Outputting(object):
             m = self.diagnostic_variables.fields['m']
 
         alphasq = self.simulation_parameters['alphasq'][-1]
+        Ld = self.simulation_parameters['Ld'][-1]
+        periodic = self.simulation_parameters['periodic'][-1]
+        # Need to evaluate periodic factor because we need a number from Firedrake constants
+        periodic_factor = (1 - exp(-Ld/sqrt(alphasq)))
+        periodic_factor = periodic_factor.evaluate(0,0,0,0)
 
         for diagnostic in self.diagnostic_values:
             if failed:
-                output = [np.nan] if diagnostic == 'mu' else np.nan
+                output = [[np.nan], [np.nan]] if diagnostic == 'mu' else np.nan
             elif diagnostic == 'energy':
                 output = assemble((dot(u, u) + alphasq*dot(u.dx(0),u.dx(0)))*dx)
             elif diagnostic == 'l2_m':
@@ -123,8 +133,13 @@ class Outputting(object):
                 output = find_max(self.diagnostic_variables.fields['du_smooth'], self.diagnostic_variables.smooth_coords)[1]
             elif diagnostic == 'min_du_smooth_loc':
                 output = find_min(self.diagnostic_variables.fields['du_smooth'], self.diagnostic_variables.smooth_coords)[1]
+            elif diagnostic == 'max_du':
+                output = np.max(self.diagnostic_variables.fields['du'].dat.data[:])
+            elif diagnostic == 'min_du':
+                output = np.min(self.diagnostic_variables.fields['du'].dat.data[:])
             elif diagnostic == 'mu':
-                output = find_mus(u, self.diagnostic_variables.fields['du'], self.diagnostic_variables.coords)
+                old_mu, alt_mu = find_mus(u, self.diagnostic_variables.fields['du'], self.diagnostic_variables.coords)
+                output = [old_mu, alt_mu]
             elif diagnostic == 'a':
                 output = self.diagnostic_variables.fields['a'].at(self.data_file['x'][:], tolerance=1e-6)
             elif diagnostic == 'b':
@@ -136,7 +151,10 @@ class Outputting(object):
             elif diagnostic == 'l2_kdv_3':
                 output = norm(self.diagnostic_variables.fields['kdv_3'], norm_type='L2')
             elif diagnostic == 'p_pde':
-                output = np.max(u.dat.data[:])
+                if periodic:
+                    output = np.max(u.dat.data[:]) * periodic_factor
+                else:
+                    output = np.max(u.dat.data[:])
             elif diagnostic == 'q_pde':
                 output = self.diagnostic_variables.coords.dat.data[np.argmax(u.dat.data[:])]
             elif diagnostic == 'm_max':
@@ -167,6 +185,8 @@ class Outputting(object):
             elif diagnostic == 'u_error_weak_mean':
                 u_hat_weak = self.diagnostic_variables.fields['u_sde_weak_mean']
                 output = norm(u_hat_weak)
+            elif diagnostic == 'u_field':
+                output = u.dat.data[:]
             else:
                 raise ValueError('Diagnostic %s not recgonised.' % diagnostic)
 
@@ -174,8 +194,14 @@ class Outputting(object):
                 self.data_file[diagnostic][[slice(self.t_idx,self.t_idx+1)]+self.index_slices] = output
             elif diagnostic == 'mu':
                 # we cannot store arrays of mus, so have to do them each separately
-                for i, mu in enumerate(output):
-                    self.data_file[diagnostic+'_'+str(i)][[slice(self.t_idx,self.t_idx+1)]+self.index_slices] = mu
+                for i in range(4):
+                    if i < len(output[0]):
+                        # output[0] is the old mu, output[1] is the new mu
+                        self.data_file[diagnostic+'_'+str(i)][[slice(self.t_idx,self.t_idx+1)]+self.index_slices] = output[0][i]
+                        self.data_file['alt_'+diagnostic+'_'+str(i)][[slice(self.t_idx,self.t_idx+1)]+self.index_slices] = output[1][i]
+                    else:
+                        self.data_file[diagnostic+'_'+str(i)][[slice(self.t_idx,self.t_idx+1)]+self.index_slices] = np.nan
+                        self.data_file['alt_'+diagnostic+'_'+str(i)][[slice(self.t_idx,self.t_idx+1)]+self.index_slices] = np.nan
             else:
                 self.data_file[diagnostic][[slice(self.t_idx,self.t_idx+1)]+self.index_slices] = output
 
@@ -224,10 +250,17 @@ def find_max(f, x):
     return (fmax, xmax)
 
 def find_mus(f, df, x):
+    """
+    In the alternative method, we return distance between peak and min df.
+    In the original method, we return the distance between max df and min df.
+    """
+
     list_of_mus = []
     list_of_xmin = []
     list_of_xmax = []
+    alt_list_of_mus = []
     approx_peak_locations = []
+    peak_locations = []
     approx_peak_indices = []
     peak_heights = []
     L = np.max(x.dat.data[:])
@@ -240,6 +273,7 @@ def find_mus(f, df, x):
             if f.at([0.5*(x.dat.data[i-1]+x.dat.data[i])], tolerance=1e-06) > 2*np.mean(f.dat.data[:]):
                 approx_peak_locations.append(x.dat.data[i])
                 approx_peak_indices.append(i)
+                peak_locations.append(0.5*(x.dat.data[i-1]+x.dat.data[i]))
                 peak_heights.append(f.at([0.5*(x.dat.data[i-1]+x.dat.data[i])], tolerance=1e-06))
 
     sorted_peak_heights = peak_heights.copy()
@@ -290,9 +324,13 @@ def find_mus(f, df, x):
                     list_of_mus.append(abs(xmin - xmax))
                 else:
                     list_of_mus.append(L - abs(xmin - xmax))
+                if abs(xmin - peak_locations[i]) < L / 2:
+                    alt_list_of_mus.append(abs(xmin - peak_locations[i]))
+                else:
+                    alt_list_of_mus.append(L - abs(xmin - peak_locations[i]))
                 # these were just for sanity checks
-                # list_of_xmax.append(xmax)
-                # list_of_xmin.append(xmin)
+                list_of_xmax.append(xmax)
+                list_of_xmin.append(xmin)
     else:
         # just do straightforward thing if there is only one peak
         max_idx = np.argmax(df.dat.data[:])
@@ -303,9 +341,22 @@ def find_mus(f, df, x):
             list_of_mus.append(abs(xmin - xmax))
         else:
             list_of_mus.append(L - abs(xmin - xmax))
-        # list_of_xmax.append(xmax)
-        # list_of_xmin.append(xmin)
 
-    # print(list_of_mus, list_of_xmax, approx_peak_locations, list_of_xmin)
 
-    return list_of_mus
+        if len(peak_locations) > 0:
+            if abs(xmin - peak_locations[0]) < L / 2:
+                alt_list_of_mus.append(abs(xmin - peak_locations[0]))
+            else:
+                alt_list_of_mus.append(L - abs(xmin - peak_locations[0]))
+        else:
+            # if there is no recorded peak, take half of the old mu
+            print('No peakon detected, using half-mu instead')
+            if abs(xmin - xmax) < L / 2:
+                alt_list_of_mus.append(abs(xmin - xmax)/2)
+            else:
+                alt_list_of_mus.append((L - abs(xmin - xmax))/2)
+
+        list_of_xmax.append(xmax)
+        list_of_xmin.append(xmin)
+
+    return list_of_mus, alt_list_of_mus

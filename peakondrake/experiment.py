@@ -17,7 +17,8 @@ def experiment(code, Ld, tmax, resolutions=[],
                t_kick=[], sigma_kick=0.0, smooth_t=None,
                peakon_equations=False, only_peakons=False,
                true_peakon_data=None, true_mean_peakon_data=None,
-               peakon_speed=None, expected_u=False):
+               peakon_speed=None, expected_u=False, periodic=False,
+               fixed_dW=None):
 
     # set up dumping
     dirname = 'results/'+code
@@ -37,7 +38,7 @@ def experiment(code, Ld, tmax, resolutions=[],
                   'gamma':(float, gamma),
                   'ic':('S1', ics),
                   'num_Xis':(int, num_Xis),
-                  'Xi_family':('S1', Xi_family)}
+                  'Xi_family':('S1', Xi_family),}
 
     # turns expmt_dict values into lists so they can be iterated over
     for key, value in expmt_dict.items():
@@ -75,8 +76,9 @@ def experiment(code, Ld, tmax, resolutions=[],
             fixed_parameters[key] = value
             simulation_parameters[key] = (value[1][0],)
 
-    for key, value in zip(['dirname', 'Ld', 'tmax', 'ndump', 'field_ndump', 'nXi_updates', 'allow_fail', 'smooth_t', 'peakon_equations', 'only_peakons', 'true_peakon_data', 'true_mean_peakon_data', 'peakon_speed'],
-                          [dirname, Ld, tmax, ndump, field_ndump, nXi_updates, allow_fail, smooth_t, peakon_equations, only_peakons, true_peakon_data, true_mean_peakon_data, peakon_speed]):
+    # Stuff where there can be only one value that is fixed for all experiments
+    for key, value in zip(['dirname', 'Ld', 'tmax', 'ndump', 'field_ndump', 'nXi_updates', 'allow_fail', 'smooth_t', 'peakon_equations', 'only_peakons', 'true_peakon_data', 'true_mean_peakon_data', 'peakon_speed', 'periodic', 'fixed_dW'],
+                          [dirname, Ld, tmax, ndump, field_ndump, nXi_updates, allow_fail, smooth_t, peakon_equations, only_peakons, true_peakon_data, true_mean_peakon_data, peakon_speed, periodic, fixed_dW]):
         simulation_parameters[key] = (value,)
 
     output_arguments = ('time',) + tuple(variable_parameters.keys())
@@ -95,15 +97,26 @@ def experiment(code, Ld, tmax, resolutions=[],
         # create dimensions and variables
         data_file.createDimension('time', None)
         data_file.createVariable('time', float, ('time',))
-        data_file.createDimension('x', 100)
-        data_file.createVariable('x', float, ('x',))
-        data_file['x'][:] = np.linspace(0, Ld, num=100, endpoint=False)
+
 
         if 'resolution' in variable_parameters.keys():
             data_file.createDimension('resolution', len(variable_parameters['resolution'][1]))
             data_file.createVariable('deltax', float, ('resolution',))
             for j, res in enumerate(variable_parameters['resolution'][1]):
                 data_file['deltax'][j:j+1] =  Ld / variable_parameters['resolution'][1][j]
+
+            # create a fixed x dimension for a and b fields
+            data_file.createDimension('x', 100)
+            data_file.createVariable('x', float, ('x',))
+            data_file['x'][:] = np.linspace(0, Ld, num=100, endpoint=False)
+            simulation_parameters['store_coordinates'] = [False]
+
+        else:
+            # if the resolution is not varying, we can use the real resolution
+            num_points = simulation_parameters['resolution'][-1]
+            data_file.createDimension('x', num_points)
+            data_file.createVariable('x', float, ('x',))
+            simulation_parameters['store_coordinates'] = [True]
 
         for key, values in variable_parameters.items():
             if key != 'resolution':
@@ -118,7 +131,8 @@ def experiment(code, Ld, tmax, resolutions=[],
                 if output == 'mu':
                     for i in range(4):
                         data_file.createVariable(output+'_'+str(i), float, output_arguments)
-                elif output in ('a', 'b'):
+                        data_file.createVariable('alt_'+output+'_'+str(i), float, output_arguments)
+                elif output in ('a', 'b', 'u_field'):
                     data_file.createVariable(output, float, output_arguments+('x',))
                 else:
                     data_file.createVariable(output, float, output_arguments)

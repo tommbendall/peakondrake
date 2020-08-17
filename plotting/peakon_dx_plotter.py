@@ -17,8 +17,8 @@ font = {'size':fs}
 plt.rc('font',**font)
 plt.locator_params(nbins=3)
 
-code = 'gahito_final_peakon_convergence_dx'
-data = Dataset('src/peakondrake/results/'+code+'/data.nc', 'r')
+code = 'periodic_peakon_convergence_dx'
+data = Dataset('results/'+code+'/data.nc', 'r')
 dxs = []
 ncells = [500., 750., 1000., 1500., 2000.]
 Ld = 40.0
@@ -48,4 +48,4 @@ ax.set_xlabel(r'$\log(\Delta x)$')
 ax.set_ylabel(r'$\log\left(||u_{PDE}-u_{SDE}||\right)$')
 plt.locator_params(nbins=3)
 
-plt.savefig('figures/final/peakon_dx_convergence.png', bbox_extra_artists=(leg,), bbox_inches='tight')
+plt.savefig('figures/periodic_peakon_dx_convergence.png', bbox_extra_artists=(leg,), bbox_inches='tight')

@@ -1,5 +1,6 @@
+import numpy as np
 from firedrake import (dx, conditional, exp, as_vector, dot, pi, sqrt,
-                       Function, NonlinearVariationalSolver,
+                       Function, NonlinearVariationalSolver, cos,
                        TestFunction, NonlinearVariationalProblem,
                        SpatialCoordinate, Constant, FunctionSpace, cosh,
                        MixedFunctionSpace, TestFunctions, split)
@@ -31,6 +32,7 @@ def build_initial_conditions(prognostic_variables, simulation_parameters):
                'gaussian_wide': 0.5*exp(-((x-10.)/3.)**2),
                'peakon': conditional(x < Ld/2., exp((x-Ld/2)/sqrt(alphasq)), exp(-(x-Ld/2)/sqrt(alphasq))),
                'one_peak': 0.5*2/(exp(x-203./15.*40./Ld)+exp(-x+203./15.*40./Ld)),
+               'proper_peak': 0.5*2/(exp(x-Ld/4)+exp(-x+Ld/4)),
                'flat': Constant(2*pi**2/(9*40**2)),
                'fast_flat': Constant(0.1),
                'coshes': Constant(2000)*cosh((2000**0.5/2)*(x-0.75))**(-2)+Constant(1000)*cosh(1000**0.5/2*(x-0.25))**(-2),
@@ -42,7 +44,11 @@ def build_initial_conditions(prognostic_variables, simulation_parameters):
                'twin_peakons': conditional(x < Ld/4, exp((x-Ld/4)/sqrt(alphasq)) + 0.5* exp((x-Ld/2)/sqrt(alphasq)),
                                            conditional(x < Ld/2, exp(-(x-Ld/4)/sqrt(alphasq)) + 0.5* exp((x-Ld/2)/sqrt(alphasq)),
                                                        conditional(x < 3*Ld/4, exp(-(x-Ld/4)/sqrt(alphasq)) + 0.5 * exp(-(x-Ld/2)/sqrt(alphasq)),
-                                                                   exp((x-5*Ld/4)/sqrt(alphasq)) + 0.5 * exp(-(x-Ld/2)/sqrt(alphasq)))))}
+                                                                   exp((x-5*Ld/4)/sqrt(alphasq)) + 0.5 * exp(-(x-Ld/2)/sqrt(alphasq))))),
+               'periodic_peakon': conditional(x < Ld/2, exp((x-Ld/2)/sqrt(alphasq)) + exp(-Ld)*exp(-(x-Ld/2)/sqrt(alphasq)),
+                                                        exp(-(x-Ld/2)/sqrt(alphasq)) + exp(-Ld/sqrt(alphasq))*exp((x-Ld/2)/sqrt(alphasq))),
+               'cos_bell':conditional(x < Ld/4, (cos(pi*(x-Ld/8)/(2*Ld/8)))**2, 0.0),
+               'antisymmetric': 1/(exp((x-Ld/4)/Ld)+exp((-x+Ld/4)/Ld)) - 1/(exp((Ld-x-Ld/4)/Ld)+exp((Ld+x+Ld/4)/Ld))}
 
     ic_expr = ic_dict[ic]
 

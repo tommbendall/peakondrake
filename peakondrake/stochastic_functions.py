@@ -27,12 +27,13 @@ class StochasticFunctions(object):
         self.Xi_functions = []
         self.nXi_updates = simulation_parameters['nXi_updates'][-1]
         self.smooth_t = simulation_parameters['smooth_t'][-1]
+        self.fixed_dW = simulation_parameters['fixed_dW'][-1]
 
         if self.smooth_t is not None and self.nXi_updates > 1:
             raise ValueError('Prescribing forcing and including multiple Xi updates are not compatible.')
 
-        if self.smooth_t is not None:
-            print('WARNING: Remember to change sigma to sigma * sqrt(dt) with the prescribed forcing option.')
+        if self.smooth_t is not None or self.fixed_dW is not None:
+            print('WARNING: Remember to change sigma to sigma * sqrt(dt) with the prescribed forcing option or the fixed_dW option.')
 
         if self.nXi_updates > 1:
             print('WARNING: Remember to change sigma to sigma / sqrt(nXi_updates) with nXi_updates.')
@@ -101,6 +102,18 @@ class StochasticFunctions(object):
                                                                              (x-Ld/2)**2+Ld**2/32),
                                                                  (x-Ld/4)**2),
                                                      0.0))
+        elif self.Xi_family == 'proper_peak':
+            if self.num_Xis > 1:
+                raise NotImplementedError('Quadratic Xi not yet implemented for more than one Xi')
+            else:
+                self.Xi_functions.append(0.5*2/(exp(x-Ld/2)+exp(-x+Ld/2)))
+
+        elif self.Xi_family == 'constant':
+            if self.num_Xis > 1:
+                raise NotImplementedError('Constant Xi not yet implemented for more than one Xi')
+            else:
+                self.Xi_functions.append(sin(0*pi*x/Ld)+1)
+
 
         else:
             raise NotImplementedError('Xi_family %s not implemented' % self.Xi_family)
@@ -129,8 +142,14 @@ class StochasticFunctions(object):
                 Xi_x_solver = NonlinearVariationalSolver(Xi_x_problem)
                 Xi_xx_solver = NonlinearVariationalSolver(Xi_xx_problem)
 
-                Xi_x_solver.solve()
-                Xi_xx_solver.solve()
+                # for some reason these solvers don't work for constant Xi functions
+                # so just manually make the derivatives be zero
+                if self.Xi_family == 'constant':
+                    Xi_x_function.interpolate(0.0*x)
+                    Xi_xx_function.interpolate(0.0*x)
+                else:
+                    Xi_x_solver.solve()
+                    Xi_xx_solver.solve()
 
                 self.Xi_x_functions.append(Xi_x_function)
                 self.Xi_xx_functions.append(Xi_xx_function)
@@ -155,10 +174,13 @@ class StochasticFunctions(object):
 
             else:
                 pure_xi.interpolate(self.sigma*Xi_function)
-                pure_xi_x.project(self.sigma*Xi_function.dx(0))
-                pure_xi_xx.project(pure_xi_x.dx(0))
-                pure_xi_xxx.project(pure_xi_xx.dx(0))
-                pure_xi_xxxx.project(pure_xi_xxx.dx(0))
+
+                # I guess we can't take the gradient of constants
+                if self.Xi_family != 'constant':
+                    pure_xi_x.project(self.sigma*Xi_function.dx(0))
+                    pure_xi_xx.project(pure_xi_x.dx(0))
+                    pure_xi_xxx.project(pure_xi_xx.dx(0))
+                    pure_xi_xxxx.project(pure_xi_xxx.dx(0))
 
         if self.scheme in ['upwind', 'LASCH']:
             self.Xi_interpolator = Interpolator(as_vector([Xi_expr]), self.Xi)
@@ -187,6 +209,8 @@ class StochasticFunctions(object):
         if self.num_Xis > 0:
             if self.smooth_t is not None:
                 [dw.assign(self.sigma*self.smooth_t(t)) for dw in self.dWs]
+            elif self.fixed_dW is not None:
+                [dw.assign(self.sigma*self.fixed_dW) for dw in self.dWs]
             else:
                 [dw.assign(self.sigma*np.random.randn()) for dw in self.dWs]
                 if self.nXi_updates > 1:

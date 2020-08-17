@@ -76,7 +76,6 @@ def simulation(simulation_parameters,
     diagnostic_equations.solve()
 
 
-
     dumpn = 0
     field_dumpn = 0
     # want the update to always happen on first time step (so results are consistent with earlier results)
@@ -130,6 +129,8 @@ def simulation(simulation_parameters,
                 field_dumpn -= field_ndump
 
     outputting.store_times(failed_time)
+
+    outputting.data_file.close()
 
     if expected_u:
         return prognostic_variables.u
