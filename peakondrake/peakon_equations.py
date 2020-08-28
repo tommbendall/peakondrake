@@ -10,11 +10,9 @@ class PeakonEquations(object):
     :arg simulation_parameters: a dictionary storing the simulation parameters.
     """
 
-    def __init__(self, prognostic_variables, simulation_parameters, peakon_speed):
+    def __init__(self, prognostic_variables, simulation_parameters, peakon_speed, method='ito_euler'):
 
-        self.Xi = prognostic_variables.Xi
-        self.Xi_x = prognostic_variables.Xi_x
-        self.Xi_xx = prognostic_variables.Xi_xx
+        self.dWs = prognostic_variables.dW_nums
         self.pure_xi_list = prognostic_variables.pure_xi_list
         self.pure_xi_x_list = prognostic_variables.pure_xi_x_list
         self.pure_xi_xx_list = prognostic_variables.pure_xi_xx_list
@@ -24,6 +22,7 @@ class PeakonEquations(object):
         coords = Function(self.u.function_space()).project(x)
         self.dt = simulation_parameters['dt'][-1]
         self.Ld = simulation_parameters['Ld'][-1]
+        self.method = method
 
         p0 = np.max(self.u.dat.data[:])
         q0 = coords.dat.data[np.argmax(self.u.dat.data[:])]
@@ -33,11 +32,28 @@ class PeakonEquations(object):
 
     def update(self):
 
-        dp = - self.dt ** 0.5 * self.p * self.Xi_x.at(self.q, tolerance=1e-6)
-        dq = self.p * self.dt + self.dt ** 0.5 * self.Xi.at(self.q, tolerance=1e-6)
-        for pure_xi, pure_xi_x, pure_xi_xx in zip(self.pure_xi_list, self.pure_xi_x_list, self.pure_xi_xx_list):
-            dp += 0.5 * self.p * (pure_xi_x.at(self.q, tolerance=1e-6) ** 2 - pure_xi.at(self.q, tolerance=1e-6) * pure_xi_xx.at(self.q, tolerance=1e-6)) * self.dt
-            dq += 0.5 * pure_xi.at(self.q, tolerance=1e-6) * pure_xi_x.at(self.q, tolerance=1e-6) * self.dt
+        dp = 0
+        dq = self.p*self.dt
+
+        if self.method == 'ito_euler':
+
+            for xi_field, xi_x_field, xi_xx_field, dW in zip(self.pure_xi_list, self.pure_xi_x_list, self.pure_xi_xx_list, self.dWs):
+                xi = xi_field.at(self.q, tolerance=1e-6)
+                xi_x = xi_x_field.at(self.q, tolerance=1e-6)
+                xi_xx = xi_xx_field.at(self.q, tolerance=1e-6)
+
+                dp += self.p/2*(xi_x*xi_x - xi*xi_xx)*self.dt - self.p*xi_x*dW
+                dq += 0.5*xi*xi_x*self.dt + xi*dW
+
+        elif self.method == 'milstein':
+
+            for xi_field, xi_x_field, xi_xx_field, dW in zip(self.pure_xi_list, self.pure_xi_x_list, self.pure_xi_xx_list, self.dWs):
+                xi = xi_field.at(self.q, tolerance=1e-6)
+                xi_x = xi_x_field.at(self.q, tolerance=1e-6)
+                xi_xx = xi_xx_field.at(self.q, tolerance=1e-6)
+
+                dp += self.p/2*(xi_x*xi_x - xi*xi_xx)*dW**2 - self.p*xi_x*dW
+                dq += 0.5*xi*xi_x*dW**2 + xi*dW
 
         self.p += dp
         self.q += dq

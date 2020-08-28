@@ -18,6 +18,7 @@ def experiment(code, Ld, tmax, resolutions=[],
                peakon_equations=False, only_peakons=False,
                true_peakon_data=None, true_mean_peakon_data=None,
                peakon_speed=None, expected_u=False, periodic=False,
+               peak_width=1.0, peakon_method='ito_euler',
                fixed_dW=None):
 
     # set up dumping
@@ -77,8 +78,8 @@ def experiment(code, Ld, tmax, resolutions=[],
             simulation_parameters[key] = (value[1][0],)
 
     # Stuff where there can be only one value that is fixed for all experiments
-    for key, value in zip(['dirname', 'Ld', 'tmax', 'ndump', 'field_ndump', 'nXi_updates', 'allow_fail', 'smooth_t', 'peakon_equations', 'only_peakons', 'true_peakon_data', 'true_mean_peakon_data', 'peakon_speed', 'periodic', 'fixed_dW'],
-                          [dirname, Ld, tmax, ndump, field_ndump, nXi_updates, allow_fail, smooth_t, peakon_equations, only_peakons, true_peakon_data, true_mean_peakon_data, peakon_speed, periodic, fixed_dW]):
+    for key, value in zip(['dirname', 'Ld', 'tmax', 'ndump', 'field_ndump', 'nXi_updates', 'allow_fail', 'smooth_t', 'peakon_equations', 'only_peakons', 'true_peakon_data', 'true_mean_peakon_data', 'peakon_speed', 'periodic', 'fixed_dW', 'peak_width', 'peakon_method'],
+                          [dirname, Ld, tmax, ndump, field_ndump, nXi_updates, allow_fail, smooth_t, peakon_equations, only_peakons, true_peakon_data, true_mean_peakon_data, peakon_speed, periodic, fixed_dW, peak_width, peakon_method]):
         simulation_parameters[key] = (value,)
 
     output_arguments = ('time',) + tuple(variable_parameters.keys())

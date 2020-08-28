@@ -31,7 +31,7 @@ class Equations(object):
                 Vu = prognostic_variables.Vu
                 self.m = prognostic_variables.m
                 self.u = prognostic_variables.u
-                self.Xi = prognostic_variables.Xi
+                self.Xi = prognostic_variables.dXi
                 self.m0 = Function(Vm).assign(self.m)
 
                 # now make problem for the actual problem
@@ -39,7 +39,7 @@ class Equations(object):
                 self.m_trial = Function(Vm)
                 self.dm = Function(Vm)  # introduce this as the advection operator for a single step
 
-                us = Dt * self.u + sqrt(Dt) * self.Xi
+                us = Dt * self.u + self.Xi
 
                 nhat = FacetNormal(mesh)
                 un = 0.5*(dot(us, nhat) + abs(dot(us, nhat)))
@@ -68,7 +68,7 @@ class Equations(object):
                 self.m = prognostic_variables.m
                 self.Em = prognostic_variables.Em
                 self.Eu = prognostic_variables.Eu
-                self.Xi = prognostic_variables.Xi
+                self.Xi = prognostic_variables.dXi
                 self.m0 = Function(Vm).assign(self.m)
                 self.Em0 = Function(Vm).assign(self.Em)
                 pure_xis = prognostic_variables.pure_xi_list
@@ -90,7 +90,7 @@ class Equations(object):
                 self.Em_trial = Function(Vm)
                 self.dEm = Function(Vm)
 
-                us = Dt * self.Eu + sqrt(Dt) * self.Xi
+                us = Dt * self.Eu + self.Xi
 
                 nhat = FacetNormal(mesh)
                 usn = 0.5*(dot(us, nhat) + abs(dot(us, nhat)))
@@ -164,7 +164,7 @@ class Equations(object):
                 self.m = prognostic_variables.m
                 self.Em = prognostic_variables.Em
                 self.Eu = prognostic_variables.Eu
-                self.Xi = prognostic_variables.Xi
+                self.Xi = prognostic_variables.dXi
                 self.m0 = Function(Vm).assign(self.m)
                 self.Em0 = Function(Vm).assign(self.Em)
                 pure_xis = prognostic_variables.pure_xi_list
@@ -178,7 +178,7 @@ class Equations(object):
                 self.Em_trial = Function(Vm)
                 self.Emh = 0.5*(self.Em_trial + self.Em0)
 
-                us = Dt * self.Eu + sqrt(Dt) * self.Xi
+                us = Dt * self.Eu + self.Xi
 
                 nhat = FacetNormal(mesh)
                 usn = 0.5*(dot(us, nhat) + abs(dot(us, nhat)))
@@ -231,7 +231,7 @@ class Equations(object):
                 Vu = prognostic_variables.Vu
                 self.u = prognostic_variables.u
                 self.Eu = prognostic_variables.Eu
-                self.Xi = prognostic_variables.Xi
+                self.Xi = prognostic_variables.dXi
                 pure_xis = prognostic_variables.pure_xi_list
                 pure_xixs = prognostic_variables.pure_xi_x_list
                 pure_xixxs = prognostic_variables.pure_xi_xx_list
@@ -268,9 +268,9 @@ class Equations(object):
                 w1 = Function(W)
                 self.u1, dFh, dGh, H = split(w1)
                 uh = (self.u1 + self.u) / 2
-                dXi = sqrt(Dt) * prognostic_variables.Xi
-                dXi_x = sqrt(Dt) * prognostic_variables.Xi_x
-                dXi_xx = sqrt(Dt) * prognostic_variables.Xi_xx
+                dXi = prognostic_variables.dXi
+                dXi_x = prognostic_variables.dXi_x
+                dXi_xx = prognostic_variables.dXi_xx
                 dv = Dt * (self.Eu + self.Eu1) / 2 + dXi
                 DU = (self.Eu + self.Eu1) / 2 - uh
 
@@ -302,7 +302,7 @@ class Equations(object):
                 Vu = prognostic_variables.Vu
                 self.u = prognostic_variables.u
                 self.Eu = prognostic_variables.Eu
-                self.Xi = prognostic_variables.Xi
+                self.Xi = prognostic_variables.dXi
                 pure_xis = prognostic_variables.pure_xi_list
                 pure_xixs = prognostic_variables.pure_xi_x_list
                 pure_xixxs = prognostic_variables.pure_xi_xx_list
@@ -352,9 +352,9 @@ class Equations(object):
                 w1 = Function(W)
                 self.u1, dFh = split(w1)
                 uh = (self.u1 + self.u) / 2
-                dXi = sqrt(Dt) * prognostic_variables.Xi
-                dXi_x = sqrt(Dt) * prognostic_variables.Xi_x
-                dXi_xx = sqrt(Dt) * prognostic_variables.Xi_xx
+                dXi = prognostic_variables.dXi
+                dXi_x = prognostic_variables.dXi_x
+                dXi_xx = prognostic_variables.dXi_xx
                 dv = Dt * Euh + dXi
 
                 ueqn = (psi * (self.u1 - self.u) * dx
@@ -387,7 +387,7 @@ class Equations(object):
                 Vu = prognostic_variables.Vu
                 self.m = prognostic_variables.m
                 self.u = prognostic_variables.u
-                self.Xi = prognostic_variables.Xi
+                self.Xi = prognostic_variables.dXi
                 self.m0 = Function(Vm).assign(self.m)
 
                 # now make problem for the actual problem
@@ -395,7 +395,7 @@ class Equations(object):
                 self.m_trial = Function(Vm)
                 self.mh = (self.m0 + self.m_trial) / 2
 
-                us = Dt * self.u + sqrt(Dt) * self.Xi
+                us = Dt * self.u + self.Xi
 
                 nhat = FacetNormal(mesh)
                 un = 0.5*(dot(us, nhat) + abs(dot(us, nhat)))
@@ -422,7 +422,7 @@ class Equations(object):
 
                 self.u = prognostic_variables.u
                 self.m = prognostic_variables.m
-                self.Xi = prognostic_variables.Xi
+                self.Xi = prognostic_variables.dXi
                 self.u0 = prognostic_variables.u0.assign(self.u)
 
                 zeta = TestFunction(Vm)
@@ -438,7 +438,7 @@ class Equations(object):
                 self.u1, self.m1 = split(w1)
                 uh = (self.u1 + self.u) / 2
                 mh = (self.m1 + self.m) / 2
-                us = Dt * uh + sqrt(Dt) * self.Xi
+                us = Dt * uh + self.Xi
 
                 Lu = (psi * (self.m1 - self.m) * dx
                       - psi.dx(0) * mh * us * dx
@@ -468,9 +468,9 @@ class Equations(object):
                 self.u1, dFh, dGh = split(w1)
 
                 uh  = (self.u1 + self.u) / 2
-                dXi = sqrt(Dt) * prognostic_variables.Xi
-                dXi_x = sqrt(Dt) * prognostic_variables.Xi_x
-                dXi_xx = sqrt(Dt) * prognostic_variables.Xi_xx
+                dXi = prognostic_variables.dXi
+                dXi_x = prognostic_variables.dXi_x
+                dXi_xx = prognostic_variables.dXi_xx
                 dvh = Dt * uh + dXi
 
                 Lu = (psi * (self.u1 - self.u) * dx
@@ -503,9 +503,9 @@ class Equations(object):
                 self.u1, dFh, uh_xx = split(w1)
 
                 uh  = (self.u1 + self.u) / 2
-                dXi = sqrt(Dt) * prognostic_variables.Xi
-                dXi_x = sqrt(Dt) * prognostic_variables.Xi_x
-                dXi_xx = sqrt(Dt) * prognostic_variables.Xi_xx
+                dXi = prognostic_variables.dXi
+                dXi_x = prognostic_variables.dXi_x
+                dXi_xx = prognostic_variables.dXi_xx
                 dvh = Dt * uh + dXi
 
                 Lu = (psi * (self.u1 - self.u) * dx
@@ -532,7 +532,7 @@ class Equations(object):
                 psi = TestFunction(Vu)
                 self.u1 = Function(Vu)
                 uh = (self.u1 + self.u) / 2
-                dvh = Dt * uh + sqrt(Dt) * prognostic_variables.Xi
+                dvh = Dt * uh + prognostic_variables.dXi
 
                 eqn = (psi * (self.u1 - self.u) * dx - psi * uh * dvh.dx(0) * dx)
                 prob = NonlinearVariationalProblem(eqn, self.u1)
@@ -557,7 +557,7 @@ class Equations(object):
                 Vu = prognostic_variables.Vu
 
                 self.u = prognostic_variables.u
-                self.Xi = prognostic_variables.Xi
+                self.Xi = prognostic_variables.dXi
                 self.u0 = prognostic_variables.u0
 
                 W = MixedFunctionSpace((Vu, Vf))
@@ -566,7 +566,7 @@ class Equations(object):
                 w1 = Function(W)
                 self.u1, Fh = split(w1)
                 uh = (self.u1 + self.u) / 2
-                us = Dt * uh + sqrt(Dt) * self.Xi
+                us = Dt * uh + self.Xi
 
                 Lu = (psi * (self.u1 - self.u) * dx
                       - 6 * psi.dx(0) * uh * us * dx

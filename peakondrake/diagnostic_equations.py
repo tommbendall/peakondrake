@@ -28,7 +28,7 @@ class DiagnosticEquations(object):
         Dt = Constant(simulation_parameters['dt'][-1])
         Ld = simulation_parameters['Ld'][-1]
         u = self.prognostic_variables.u
-        Xi = self.prognostic_variables.Xi
+        Xi = self.prognostic_variables.dXi
         Vu = u.function_space()
         vector_u = True if Vu.ufl_element() == VectorElement else False
         ones = Function(VectorFunctionSpace(self.prognostic_variables.mesh, "CG", 1)).project(as_vector([Constant(1.0)]))
@@ -86,7 +86,7 @@ class DiagnosticEquations(object):
                 self.interpolators.append(Eu_interpolator)
 
             elif key == 'Xiscalar':
-                Xi = self.prognostic_variables.Xi
+                Xi = self.prognostic_variables.dXi
                 Xiscalar = self.diagnostic_variables.fields['Xiscalar']
                 Xi_interpolator = Interpolator(dot(ones, Xi), Xiscalar)
                 self.interpolators.append(Xi_interpolator)

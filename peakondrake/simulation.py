@@ -46,11 +46,13 @@ def simulation(simulation_parameters,
     allow_fail = simulation_parameters['allow_fail'][-1]
     only_peakons = simulation_parameters['only_peakons'][-1]
     peakon_speed = simulation_parameters['peakon_speed'][-1]
+    peakon_method = simulation_parameters['peakon_method'][-1]
+    num_Xis = simulation_parameters['num_Xis'][-1]
 
     allow_fail = True if only_peakons else allow_fail
 
 
-    prognostic_variables = PrognosticVariables(scheme, mesh)
+    prognostic_variables = PrognosticVariables(scheme, mesh, num_Xis)
     diagnostic_variables = DiagnosticVariables(prognostic_variables, fields_to_output, diagnostic_values=diagnostic_values)
 
     build_initial_conditions(prognostic_variables, simulation_parameters)
@@ -60,7 +62,7 @@ def simulation(simulation_parameters,
 
     # set up peakon equations
     if simulation_parameters['peakon_equations'][-1] == True:
-        peakon_equations = PeakonEquations(prognostic_variables, simulation_parameters, peakon_speed)
+        peakon_equations = PeakonEquations(prognostic_variables, simulation_parameters, peakon_speed, peakon_method)
     elif simulation_parameters['peakon_equations'][-1] == False:
         peakon_equations = None
     else:
@@ -143,7 +145,7 @@ class PrognosticVariables(object):
     :arg scheme: string specifying which equation set to use.
     :arg mesh: the mesh of the domain.
     """
-    def __init__(self, scheme, mesh):
+    def __init__(self, scheme, mesh, num_Xis):
 
         self.scheme = scheme
         self.mesh = mesh
@@ -179,10 +181,10 @@ class PrognosticVariables(object):
             self.fields['Eu'] = self.Eu
             self.fields['m'] = self.m
             self.fields['Em'] = self.Em
-            self.Xi_x = Function(self.Vu, name='Xi_x')
-            self.Xi_xx = Function(self.Vu, name='Xi_xx')
-            self.fields['Xi_x'] = self.Xi_x
-            self.fields['Xi_xx'] = self.Xi_xx
+            self.dXi_x = Function(self.Vu, name='dXi_x')
+            self.dXi_xx = Function(self.Vu, name='dXi_xx')
+            self.fields['dXi_x'] = self.dXi_x
+            self.fields['dXi_xx'] = self.dXi_xx
         elif scheme == 'LASCH_hydrodynamic_m':
             self.Vm = FunctionSpace(mesh, "CG", 1)
             self.Vu = FunctionSpace(mesh, "CG", 1)
@@ -194,10 +196,10 @@ class PrognosticVariables(object):
             self.fields['Eu'] = self.Eu
             self.fields['m'] = self.m
             self.fields['Em'] = self.Em
-            self.Xi_x = Function(self.Vu, name='Xi_x')
-            self.Xi_xx = Function(self.Vu, name='Xi_xx')
-            self.fields['Xi_x'] = self.Xi_x
-            self.fields['Xi_xx'] = self.Xi_xx
+            self.dXi_x = Function(self.Vu, name='dXi_x')
+            self.dXi_xx = Function(self.Vu, name='dXi_xx')
+            self.fields['dXi_x'] = self.dXi_x
+            self.fields['dXi_xx'] = self.dXi_xx
         elif scheme == 'no_gradient':
             self.Vm = FunctionSpace(mesh, "CG", 1)
             self.Vu = FunctionSpace(mesh, "CG", 1)
@@ -209,10 +211,10 @@ class PrognosticVariables(object):
             self.fields['Eu'] = self.Eu
             self.fields['m'] = self.m
             self.fields['Em'] = self.Em
-            self.Xi_x = Function(self.Vu, name='Xi_x')
-            self.Xi_xx = Function(self.Vu, name='Xi_xx')
-            self.fields['Xi_x'] = self.Xi_x
-            self.fields['Xi_xx'] = self.Xi_xx
+            self.dXi_x = Function(self.Vu, name='dXi_x')
+            self.dXi_xx = Function(self.Vu, name='dXi_xx')
+            self.fields['dXi_x'] = self.dXi_x
+            self.fields['dXi_xx'] = self.dXi_xx
         elif scheme == 'conforming':
             self.Vu = FunctionSpace(mesh, "CG", 1)
             self.u = Function(self.Vu, name='u')
@@ -225,11 +227,11 @@ class PrognosticVariables(object):
         elif scheme == 'hydrodynamic':
             self.Vu = FunctionSpace(mesh, "CG", 1)
             self.u = Function(self.Vu, name='u')
-            self.Xi_x = Function(self.Vu, name='Xi_x')
-            self.Xi_xx = Function(self.Vu, name='Xi_xx')
+            self.dXi_x = Function(self.Vu, name='dXi_x')
+            self.dXi_xx = Function(self.Vu, name='dXi_xx')
             self.fields['u'] = self.u
-            self.fields['Xi_x'] = self.Xi_x
-            self.fields['Xi_xx'] = self.Xi_xx
+            self.fields['dXi_x'] = self.dXi_x
+            self.fields['dXi_xx'] = self.dXi_xx
         elif scheme == 'test':
             self.Vu = FunctionSpace(mesh, "CG", 1)
             self.u = Function(self.Vu, name='u')
@@ -237,8 +239,9 @@ class PrognosticVariables(object):
         else:
             raise ValueError('Scheme not recognised.')
 
-        self.Xi = Function(self.Vu, name='Xi')
-        self.fields['Xi'] = self.Xi
+        self.dXi = Function(self.Vu, name='dXi')
+        self.dW_nums = np.zeros(num_Xis)  # a list of the pure dW numbers
+        self.fields['dXi'] = self.dXi
         self.pure_xi_list = []
         self.pure_xi_x_list = []
         self.pure_xi_xx_list = []

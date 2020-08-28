@@ -23,6 +23,7 @@ def build_initial_conditions(prognostic_variables, simulation_parameters):
     x, = SpatialCoordinate(mesh)
     Ld = simulation_parameters['Ld'][-1]
     deltax = Ld / simulation_parameters['resolution'][-1]
+    w = simulation_parameters['peak_width'][-1]
     epsilon = 1
 
     ic_dict = {'two_peaks': (0.2*2/(exp(x-403./15.*40./Ld) + exp(-x+403./15.*40./Ld))
@@ -33,6 +34,7 @@ def build_initial_conditions(prognostic_variables, simulation_parameters):
                'peakon': conditional(x < Ld/2., exp((x-Ld/2)/sqrt(alphasq)), exp(-(x-Ld/2)/sqrt(alphasq))),
                'one_peak': 0.5*2/(exp(x-203./15.*40./Ld)+exp(-x+203./15.*40./Ld)),
                'proper_peak': 0.5*2/(exp(x-Ld/4)+exp(-x+Ld/4)),
+               'new_peak': 0.5*2/(exp((x-Ld/4)/w)+exp((-x+Ld/4)/w)),
                'flat': Constant(2*pi**2/(9*40**2)),
                'fast_flat': Constant(0.1),
                'coshes': Constant(2000)*cosh((2000**0.5/2)*(x-0.75))**(-2)+Constant(1000)*cosh(1000**0.5/2*(x-0.25))**(-2),
