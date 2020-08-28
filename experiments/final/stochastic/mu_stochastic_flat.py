@@ -7,20 +7,20 @@ base_code = 'new_mu_stochastic_flat'
 Ld = 40.
 tmax = 20
 dt = 0.001
-sigmas=[0.05, 0.1, 0.2, 0.5, 1.0]
 
 # sys.argv[0] is the name of the python file
 i = int(sys.argv[1])
 j = int(sys.argv[2])
-code = base_code+'_'+str(i)+'_'+str(j)
+index = 10*j + i
+code = base_code+'_'+str(index)
 
 starttime = datetime.now()
 
 experiment(code, Ld, tmax,
            resolutions=[1000, 1500, 2000, 3000, 5000],
            dts=dt,
-           sigmas=sigmas[i],
-           seeds=range(50*j,50+50*j),
+           sigmas=[0.05, 0.1, 0.2, 0.5, 1.0],
+           seeds=range(5*index,5*(index+1)),
            schemes='hydrodynamic',
            timesteppings='midpoint',
            ics='proper_peak',
