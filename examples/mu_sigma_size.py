@@ -2,15 +2,15 @@ from peakondrake import *
 from netCDF4 import Dataset
 from datetime import datetime
 
-code = 'mu_sigma_size'
+code = 'mu_sigma_example'
 Ld = 40.
-tmax = 80
+tmax = 0.1
 dt = 0.001
 
 starttime = datetime.now()
 
 experiment(code, Ld, tmax,
-           resolutions=750,
+           resolutions=500,
            dts=dt,
            sigmas=[0.04, 0.08, 0.12, 0.16, 0.2],
            seeds=0,
@@ -25,7 +25,7 @@ experiment(code, Ld, tmax,
            diagnostics=['mu', 'l2_u'],
            fields_to_output=['du'],
            ndump=int(tmax / (2000 * dt)),
-           field_ndump=int(tmax / (80 * dt)),
+           field_ndump=int(tmax / (1 * dt)),
            allow_fail=True,
            nXi_updates=1)
 
