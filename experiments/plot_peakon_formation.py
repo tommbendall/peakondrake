@@ -73,13 +73,13 @@ for i in range(num_data_files):
 
                 # Put formation time into netcdf data
                 formation_data = Dataset(formation_data_name, 'a')
-                formation_data['formation_time'][j,k,l] = biggest_jump_time
+                formation_data['formation_time'][j,k,seed] = biggest_jump_time
                 formation_data.close()
 
                 # Make plot of diagnostic so we can check if it's good
                 formation_times_to_plot = [biggest_jump_time, biggest_jump_time]
                 jump_values = [0, np.nanmax(nu)]
-                figcode = 'figures/peakon_diagnostic_flat_res'+str(j)+'_sigma'+str(k)+'_seed'+str(l)
+                figcode = 'figures/peakon_diagnostic_flat_res'+str(j)+'_sigma'+str(k)+'_seed'+str(seed)
 
                 fig = plt.figure(1, figsize=(8,8))
                 ax = fig.add_subplot(111)
