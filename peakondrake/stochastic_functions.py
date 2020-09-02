@@ -111,7 +111,7 @@ class StochasticFunctions(object):
             if self.num_Xis > 1:
                 raise NotImplementedError('Constant Xi not yet implemented for more than one Xi')
             else:
-                self.Xi_functions.append(self.sigma * sin(0*pi*x/Ld)+1)
+                self.Xi_functions.append(self.sigma * (sin(0*pi*x/Ld)+1))
 
 
         else:
