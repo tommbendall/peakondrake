@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 from netCDF4 import Dataset
 
 num_data_files = 20
-base_data_name = 'results/new_mu_stochastic_flat_'
+base_data_name = 'results/mu_stochastic_flat_'
 sigmas = [0.05, 0.1, 0.2, 0.5, 1.0]
 resolutions = [1000, 1500, 2000, 3000, 5000]
 num_seeds_per_file = 5
@@ -60,16 +60,21 @@ for i in range(num_data_files):
                 nu_jump = nu[1:] - nu[:-1]
 
                 # Find formation time
-                for n in range(1,len(time)-1):
+                for n in range(2,len(time)-1):
                     # is the jump bigger than the previous jump?
                     biggest_jump_time = np.nan
-                    if (nu_jump[n]) > (nu_jump[n-1]):
+                    if (nu_jump[n-1]) > (nu_jump[n-2]):
                         # is the jump bigger than the next average jumps?
-                        if nu_jump[n] > np.mean(np.sqrt(nu_jump[n+1:]**2)):
-                            # time of jump is mu_jump[j] = mu[j] - mu[j-1]
-                            print(n)
-                            biggest_jump_time = 0.5*(time[n] + time[n-1])
-                            break
+                        #if nu_jump[n] > np.mean(np.sqrt(nu_jump[n+1:]**2)):
+
+                        # requirement that jump must be over some minimum value
+                        if nu_jump[n-1] > 0.05:
+                            # jump should also be sustained
+                            if (nu[n+1] - nu[n]) > 0.05:
+                                # time of jump is mu_jump[j] = mu[j] - mu[j-1]
+                                print(n)
+                                biggest_jump_time = 0.5*(time[n] + time[n-1])
+                                break
 
                 # Put formation time into netcdf data
                 formation_data = Dataset(formation_data_name, 'a')

@@ -3,7 +3,7 @@ from netCDF4 import Dataset
 from datetime import datetime
 import sys
 
-base_code = 'new_mu_stochastic_flat'
+base_code = 'mu_stochastic_flat'
 Ld = 40.
 tmax = 20
 dt = 0.001
