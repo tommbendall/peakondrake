@@ -10,13 +10,13 @@ dt = 0.001
 starttime = datetime.now()
 
 experiment(code, Ld, tmax,
-           resolutions=1000,
+           resolutions=20000,
            dts=dt,
            sigmas=0.0,
            seeds=0,
            schemes='hydrodynamic',
            timesteppings='midpoint',
-           ics='one_peak',
+           ics='proper_peak',
            num_Xis=3,
            Xi_family='sines',
            alphasq=1.0,
@@ -25,7 +25,7 @@ experiment(code, Ld, tmax,
            diagnostics=['mu','u_field','max_du_loc','min_du_loc'],
            fields_to_output=[],
            ndump=int(tmax / (2000 * dt)),
-           field_ndump=int(tmax / (2000 * dt)),
+           field_ndump=int(tmax / (1 * dt)),
            allow_fail=True,
            nXi_updates=1)
 
