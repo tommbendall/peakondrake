@@ -1,8 +1,5 @@
 import os
 import matplotlib as mpl
-if os.environ.get('DISPLAY', '') == '':
-    print('no display found. Using the non interactive Agg backend')
-    mpl.use('Agg')
 from netCDF4 import Dataset
 import numpy as np
 import matplotlib.pyplot as plt
@@ -17,7 +14,7 @@ font = {'size':fs}
 plt.rc('font',**font)
 plt.locator_params(nbins=3)
 
-code = 'periodic_peakon_convergence_dx'
+code = 'convergence_dx'
 data = Dataset('results/'+code+'/data.nc', 'r')
 dxs = []
 ncells = [500., 750., 1000., 1500., 2000.]
@@ -45,7 +42,7 @@ handles, labels = ax.get_legend_handles_labels()
 leg = ax.legend(handles, labels, loc='upper left')
 
 ax.set_xlabel(r'$\log(\Delta x)$')
-ax.set_ylabel(r'$\log\left(||u_{PDE}-u_{SDE}||\right)$')
+ax.set_ylabel(r'$\log\left(||u_{PDE}-u_{SDE}||_{L^2}\right)$')
 plt.locator_params(nbins=3)
 
-plt.savefig('figures/periodic_peakon_dx_convergence.png', bbox_extra_artists=(leg,), bbox_inches='tight')
+plt.savefig('figures/dx_convergence.png')

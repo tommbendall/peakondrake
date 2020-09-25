@@ -83,6 +83,9 @@ def experiment(code, Ld, tmax, resolutions=[],
         simulation_parameters[key] = (value,)
 
     output_arguments = ('time',) + tuple(variable_parameters.keys())
+    list_of_peakon_diagnostics = ['peakon_loc', 'peakon_min_du', 'peakon_max_du',
+                                       'peakon_min_du_loc', 'peakon_max_du_loc',
+                                       'peakon_max_u', 'peakon_mu', 'peakon_nu']
 
     for i, dt in enumerate(expmt_dict['dt'][1]):
         # make data file
@@ -135,6 +138,9 @@ def experiment(code, Ld, tmax, resolutions=[],
                         data_file.createVariable('alt_'+output+'_'+str(i), float, output_arguments)
                 elif output in ('a', 'b', 'u_field'):
                     data_file.createVariable(output, float, output_arguments+('x',))
+                elif output == 'peakon_suite':
+                    for peakon_diag in list_of_peakon_diagnostics:
+                        data_file.createVariable(peakon_diag, float, output_arguments)
                 else:
                     data_file.createVariable(output, float, output_arguments)
 

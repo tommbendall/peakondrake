@@ -50,6 +50,9 @@ class Outputting(object):
         self.index_slices = [slice(index, index+1) for index in index_list]
         self.t_idx = 0
         self.diagnostic_values = diagnostic_values
+        self.list_of_peakon_diagnostics = ['peakon_loc', 'peakon_min_du', 'peakon_max_du',
+                                           'peakon_min_du_loc', 'peakon_max_du_loc',
+                                           'peakon_max_u', 'peakon_mu', 'peakon_nu']
 
 
         # set up things for dumping fields
@@ -187,6 +190,8 @@ class Outputting(object):
                 output = norm(u_hat_weak)
             elif diagnostic == 'u_field':
                 output = u.dat.data[:]
+            elif diagnostic == 'peakon_suite':
+                output = peakon_diagnostics(u, self.diagnostic_variables.fields['du'], self.diagnostic_variables.coords)
             else:
                 raise ValueError('Diagnostic %s not recgonised.' % diagnostic)
 
@@ -202,6 +207,9 @@ class Outputting(object):
                     else:
                         self.data_file[diagnostic+'_'+str(i)][[slice(self.t_idx,self.t_idx+1)]+self.index_slices] = np.nan
                         self.data_file['alt_'+diagnostic+'_'+str(i)][[slice(self.t_idx,self.t_idx+1)]+self.index_slices] = np.nan
+            elif diagnostic == 'peakon_suite':
+                for peakon_diag in self.list_of_peakon_diagnostics:
+                    self.data_file[peakon_diag][[slice(self.t_idx,self.t_idx+1)]+self.index_slices] = output[peakon_diag]
             else:
                 self.data_file[diagnostic][[slice(self.t_idx,self.t_idx+1)]+self.index_slices] = output
 
@@ -360,3 +368,83 @@ def find_mus(f, df, x):
         list_of_xmin.append(xmin)
 
     return list_of_mus, alt_list_of_mus
+
+
+def peakon_diagnostics(f, df, x):
+    """
+    This returns a set of diagnostics for determining whether the highest
+    peak is a peakon and whether it is experiencing wave breaking.
+
+    :arg x: the coordinates in DG0
+    """
+
+    L = np.max(x.dat.data[:]) + np.min(x.dat.data[:]) # x is DG0 coords so this gives the length
+
+    dof_count = len(df.dat.data[:])
+    search_length = int(dof_count/2)
+
+    # find the location of the highest peak
+    max_u = np.max(f.dat.data[:])
+    peak_idx_CG1 = np.argmax(f.dat.data[:])  # index for CG1
+    peak_idx_DG0_m = peak_idx_CG1 - 1
+    peak_idx_DG0_p = peak_idx_CG1  # conveniently this should not exceed len(dat.data[:])
+
+    # x is the coords in DG0
+    # Need correct treatment if the peak is at the edge of the domain
+    if x.dat.data[peak_idx_DG0_m] > x.dat.data[peak_idx_DG0_p]:
+         # In this situation it should just be 0
+        peak_loc = 0.5*(x.dat.data[peak_idx_DG0_m] + x.dat.data[peak_idx_DG0_p] - L)
+    else:
+        # Otherwise do normal way of finding a CG1 location from
+        peak_loc = 0.5*(x.dat.data[peak_idx_DG0_m] + x.dat.data[peak_idx_DG0_p])
+
+    # Find locations of local mins and maxs in du around the peak
+    # Start with min du to left of peak and max du to right of peak
+    guess_min_du = df.dat.data[peak_idx_DG0_m]
+    guess_max_du = df.dat.data[peak_idx_DG0_p]
+
+    min_du = np.nan
+    max_du = np.nan
+    x_min_du = np.nan
+    x_max_du = np.nan
+
+    # Find min du
+    for idx in range(peak_idx_DG0_m+1, peak_idx_DG0_m+1+search_length):
+        DG0_idx = idx - dof_count if (idx > dof_count - 1) else idx
+
+        if df.dat.data[DG0_idx] > guess_min_du:
+            min_du = guess_min_du
+            min_du_idx = DG0_idx - 1
+            x_min_du = x.dat.data[min_du_idx]
+
+            break
+        else:
+            guess_min_du = df.dat.data[DG0_idx]
+
+    # Find max du
+    for idx in range(peak_idx_DG0_p-1, peak_idx_DG0_p-1-search_length, -1):
+        DG0_idx = idx + dof_count if (idx < 0) else idx
+
+        if df.dat.data[DG0_idx] < guess_max_du:
+            max_du = guess_max_du
+            max_du_idx = DG0_idx - 1
+            x_max_du = x.dat.data[max_du_idx]
+
+            break
+        else:
+            guess_max_du = df.dat.data[DG0_idx]
+
+    # make final important diagnostics
+    mu = (x_min_du - x_max_du) if (x_max_du < x_min_du) else L - x_min_du + x_max_du
+    nu = (max_du - min_du) / mu
+
+    diagnostic_dict = {'peakon_loc': peak_loc,
+                       'peakon_min_du': min_du,
+                       'peakon_max_du': max_du,
+                       'peakon_min_du_loc': x_min_du,
+                       'peakon_max_du_loc': x_max_du,
+                       'peakon_max_u': max_u,
+                       'peakon_mu': mu,
+                       'peakon_nu': nu}
+
+    return diagnostic_dict

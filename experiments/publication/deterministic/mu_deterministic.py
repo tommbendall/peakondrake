@@ -1,34 +1,24 @@
 from peakondrake import *
 from netCDF4 import Dataset
 from datetime import datetime
-import sys
 
-base_code = 'mu_stochastic_flat'
+code = 'mu_deterministic_standard_dt'
 Ld = 40.
-tmax = 40
+tmax = 20
 dt = 0.001
-sigmas=[0.05, 0.1, 0.2, 0.3, 0.5, 0.65, 0.8, 1.0, 1.5, 2.0]
-
-if len(sys.argv) > 3:
-    raise ValueError('We can only take one argument at the moment')
-
-# sys.argv[0] is the name of the python file
-i = sys.argv[1]
-j = sys.argv[2]
-code = base_code+'_'+str(i)
 
 starttime = datetime.now()
 
 experiment(code, Ld, tmax,
-           resolutions=2000,
+           resolutions=[20000, 16000, 12500, 10000, 7500, 5000, 3000, 2000, 1500, 1000],
            dts=dt,
-           sigmas=sigmas[i],
-           seeds=range(100*j,100+100*j),
+           sigmas=0.0,
+           seeds=0,
            schemes='hydrodynamic',
            timesteppings='midpoint',
-           ics='one_peak',
+           ics='proper_peak',
            num_Xis=1,
-           Xi_family='constant',
+           Xi_family='sines',
            alphasq=1.0,
            c0=0.,
            gamma=0.,

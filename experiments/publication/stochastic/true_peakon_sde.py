@@ -4,7 +4,7 @@ from netCDF4 import Dataset
 base_code = 'true_peakon_data'
 Ld = 40.
 tmax = 0.1
-dt = 1e-5
+dt = 1e-6
 
 
 experiment(base_code, Ld, tmax,
@@ -16,7 +16,7 @@ experiment(base_code, Ld, tmax,
            timesteppings='midpoint',
            ics='periodic_peakon',
            num_Xis=1,
-           Xi_family='double_sines',
+           Xi_family='constant',
            alphasq=1.0,
            c0=0.,
            gamma=0.,

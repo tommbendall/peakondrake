@@ -349,6 +349,8 @@ class DiagnosticVariables(object):
                     required_fields.extend(['u_sde_mean'])
                 elif diagnostic == 'u_error_weak_mean':
                     required_fields.extend(['u_sde_mean', 'u_sde_weak_mean'])
+                elif diagnostic == 'peakon_suite':
+                    required_fields.extend(['du'])
 
         for field in required_fields:
             if field not in self.fields.keys():
