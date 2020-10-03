@@ -435,7 +435,7 @@ def peakon_diagnostics(f, df, x):
             guess_max_du = df.dat.data[DG0_idx]
 
     # make final important diagnostics
-    mu = (x_min_du - x_max_du) if (x_max_du < x_min_du) else L - x_min_du + x_max_du
+    mu = (x_min_du - x_max_du) if (x_max_du < x_min_du) else (L - x_min_du + x_max_du)
     nu = (max_du - min_du) / mu
 
     diagnostic_dict = {'peakon_loc': peak_loc,
