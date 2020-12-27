@@ -1,4 +1,4 @@
-from firedrake import (SpatialCoordinate, Function)
+from firedrake import (SpatialCoordinate, Function, exp, sqrt)
 import numpy as np
 
 class PeakonEquations(object):
@@ -22,9 +22,10 @@ class PeakonEquations(object):
         coords = Function(self.u.function_space()).project(x)
         self.dt = simulation_parameters['dt'][-1]
         self.Ld = simulation_parameters['Ld'][-1]
+        self.alpha = np.sqrt(simulation_parameters['alphasq'][-1].dat.data[0])
         self.method = method
 
-        p0 = np.max(self.u.dat.data[:])
+        p0 = np.max(self.u.dat.data[:])*2*(1-exp(-self.Ld/self.alpha))/(1+exp(-self.Ld/self.alpha))
         q0 = coords.dat.data[np.argmax(self.u.dat.data[:])]
 
         self.p = peakon_speed if peakon_speed is not None else p0
@@ -33,7 +34,7 @@ class PeakonEquations(object):
     def update(self):
 
         dp = 0
-        dq = self.p*self.dt
+        dq = (self.p/2)*(1+exp(-self.Ld/self.alpha))/(1-exp(-self.Ld/self.alpha)) * self.dt
 
         if self.method == 'ito_euler':
 

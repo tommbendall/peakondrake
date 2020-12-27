@@ -253,7 +253,9 @@ class DiagnosticEquations(object):
 
             elif key == 'u_sde':
                 self.to_update_constants = True
-                self.p = Constant(1.0)
+                self.Ld = Ld
+                self.alphasq = alphasq
+                self.p = Constant(1.0*0.5*(1+exp(-Ld/sqrt(alphasq)))/(1-exp(-Ld/sqrt(alphasq))))
                 self.q = Constant(Ld/2)
 
                 u_sde = self.diagnostic_variables.fields['u_sde']
@@ -372,7 +374,7 @@ class DiagnosticEquations(object):
         """
         Update p and q constants from true peakon data.
         """
-        self.p.assign(self.true_peakon_file['p'][self.outputting.t_idx])
+        self.p.assign(self.true_peakon_file['p'][self.outputting.t_idx]*0.5*(1+exp(-self.Ld/sqrt(self.alphasq)))/(1-exp(-self.Ld/sqrt(self.alphasq))))
         self.q.assign(self.true_peakon_file['q'][self.outputting.t_idx])
 
     def solve(self):
