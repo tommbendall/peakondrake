@@ -1,5 +1,0 @@
-Things to implement:
-- adding fixed parameters to output data (as metadata?)
-- adding a suite of tests
-- adding more timestepping schemes and equation forms
-- adding equations including c0 and gamma
